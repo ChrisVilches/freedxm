@@ -1,0 +1,24 @@
+enableAllRules = true
+
+[rule.exported]
+  Disabled = true
+
+[rule.package-comments]
+  Disabled = true
+
+[rule.unhandled-error]
+  arguments = ["fmt.Print", "fmt.Fprint", "fmt.Fprintln", "fmt.Printf", "fmt.Println", "fmt.Fprintf"]
+
+[rule.flag-parameter]
+  Disabled = true
+
+[rule.unchecked-type-assertion]
+  Exclude=["TEST"]
+
+[rule.line-length-limit]
+  arguments = [80]
+
+[rule.add-constant]
+  arguments = [{ maxLitCount = "1000", allowInts = "0,1,2" }]
+  Exclude=["TEST"]
+
