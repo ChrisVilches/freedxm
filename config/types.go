@@ -9,3 +9,11 @@ type blockList struct {
 type Config struct {
 	Blocklists []blockList `toml:"blocklist"`
 }
+
+func (c *Config) GetAllNames() []string {
+	res := []string{}
+	for _, blockList := range c.Blocklists {
+		res = append(res, blockList.Name)
+	}
+	return res
+}

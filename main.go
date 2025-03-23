@@ -12,6 +12,7 @@ import (
 	"github.com/ChrisVilches/freedxm/killer"
 	"github.com/ChrisVilches/freedxm/patterns"
 	"github.com/ChrisVilches/freedxm/process"
+	"github.com/ChrisVilches/freedxm/session"
 )
 
 var procBlackList patterns.Matcher
@@ -27,6 +28,10 @@ func handleProcess(proc process.Process) {
 		}
 	}
 
+	// TODO: Maybe we need a more strict matching mechanism here, because
+	// some keywords may try to kill a lot of processes that we don't want to kill.
+
+	// TODO: again, using an inconsistent term "black list"
 	if procBlackList.MatchesAny(proc.Name) != nil {
 		killer.KillAll(proc.Name)
 	}
@@ -92,34 +97,82 @@ func pollingProcess() {
 // operations, such as setting or traversing matchers, are protected by mutexes to ensure
 // thread safety.
 
+// TODO: i use the terms "proc" and "programs". Choose just one.
 func setMatchers(proc, domains []string) {
 	procBlackList.Set(proc)
 	domainsMatcher.Set(domains)
+	fmt.Println(proc, domains)
 	cond.Signal()
 }
 
-func main() {
-	go pollingProcess()
+var pipePath = "/tmp/freedxm"
+var currSessions session.CurrentSessions
 
-	configDir := "./conf"
-	configFile := "./block-lists.toml"
+func listenNewSessions() {
+	var muSessions sync.Mutex
 
-	dataCh, errCh := fileutil.ListenFileToml[config.Config](configDir, configFile)
+	sessionsCh, errCh := fileutil.ReadFromPipe[session.Session](pipePath)
 
-	go func() {
-		for {
-			select {
-			case data := <-dataCh:
-				// TODO: I'm reading the first blocklist only.
-				// It should be all lists later, and configure more stuff
-				// like which lists does a session use, etc.
-				setMatchers(data.Blocklists[0].Programs, data.Blocklists[0].Domains)
-				fmt.Println("Received:", data)
-			case err := <-errCh:
-				fmt.Println("Error:", err)
-			}
+	for {
+		select {
+		case s := <-sessionsCh:
+			muSessions.Lock()
+			sessionID := currSessions.Add(s)
+			merged := currSessions.MergeLists()
+			setMatchers(merged.Programs, merged.Domains)
+			muSessions.Unlock()
+
+			time.AfterFunc(time.Duration(s.TimeSeconds)*time.Second, func() {
+				muSessions.Lock()
+				currSessions.Remove(sessionID)
+				merged := currSessions.MergeLists()
+				setMatchers(merged.Programs, merged.Domains)
+				muSessions.Unlock()
+			})
+		case err := <-errCh:
+			fmt.Fprintln(os.Stderr, "Error reading from pipe:", err)
+			return
 		}
-	}()
+	}
+}
+
+// TODO: This will be the command in the actual CLI app, but
+// refine its functionality first obviously.
+func handleAddSessionCommand(blockListName string) {
+	blockList, err := config.GetBlockListByName(blockListName)
+	if err != nil {
+		fmt.Println(err)
+		e, ok := err.(*config.BlockListNotFoundError)
+		if ok {
+			fmt.Println("here are the available names", e.AvailableNames)
+		}
+		return
+	}
+
+	data := session.Session{
+		TimeSeconds: 10,
+		Programs:    blockList.Programs,
+		Domains:     blockList.Domains,
+	}
+	err = fileutil.WriteToPipe(pipePath, data)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func main() {
+	blockListName, present := os.LookupEnv("A")
+	if present {
+		handleAddSessionCommand(blockListName)
+		return
+	}
+
+	currSessions = session.NewCurrentSessions()
+
+	fileutil.ResetFile(pipePath)
+
+	go pollingProcess()
+	go listenNewSessions()
 
 	select {}
 }

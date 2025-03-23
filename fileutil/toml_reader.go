@@ -15,7 +15,7 @@ func readFileEntireContent(filename string) (string, error) {
 	return string(content), nil
 }
 
-func readTomlFile[T any](filename string) (*T, error) {
+func ReadTomlFile[T any](filename string) (*T, error) {
 	tomlData, err := readFileEntireContent(filename)
 	if err != nil {
 		return nil, err
