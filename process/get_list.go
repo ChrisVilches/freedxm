@@ -8,7 +8,7 @@ import (
 	"strconv"
 )
 
-type process struct {
+type Process struct {
 	PID  int
 	Name string
 }
@@ -21,15 +21,14 @@ var statRegex = regexp.MustCompile(`^(\d+)\s\(([^)]+)\)`)
 // but I don't know. It's an idea to explore. But I think this would only happen during a blocking session,
 // not at all times, even if I run this process as a long-running service.
 
-// TODO: write a fucking comment
 // TODO: Works, but it should state that the names are unique. Maybe make it configurable by parameters or change the function name.
-func GetProcessList() ([]process, error) {
+func GetProcessList() ([]Process, error) {
 	procDirs, err := filepath.Glob("/proc/[0-9]*/stat")
 	if err != nil {
 		return nil, err
 	}
 
-	result := []process{}
+	result := []Process{}
 	// TODO: This "set" is trash. Is there a better way???
 	addedNames := map[string]struct{}{}
 
@@ -60,7 +59,7 @@ func GetProcessList() ([]process, error) {
 			return nil, fmt.Errorf("cannot convert PID (%v)", err)
 		}
 
-		result = append(result, process{PID: pid, Name: match[2]})
+		result = append(result, Process{PID: pid, Name: match[2]})
 		addedNames[match[2]] = struct{}{}
 	}
 

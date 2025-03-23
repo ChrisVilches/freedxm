@@ -5,7 +5,8 @@ import (
 )
 
 func TestMatchesAny(t *testing.T) {
-	matcher := NewMatcher([]string{
+	var matcher Matcher
+	matcher.Set([]string{
 		"host.com", "hello", "world",
 		"foo%", "bar", "bonjour%%%friend.%%", "%\\%",
 	})
