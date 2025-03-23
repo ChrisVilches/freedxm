@@ -1,6 +1,6 @@
 # Freedxm
 
-Freedom port for Linux. Block Websites, Apps, and the Internet.
+Freedom Port for Linux. Block Websites, Apps, and the Internet.
 
 ## What is Freedom?
 
