@@ -5,37 +5,62 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
 
-	"github.com/ChrisVilches/freedxm/killer"
 	"github.com/ChrisVilches/freedxm/patterns"
+	"github.com/ChrisVilches/freedxm/process"
 )
 
-// TODO: there's a change this is missing some items when deserializing. I had that sensation but when
-// I tested it, it obtained all elements. Test again and verify it's deserializing all elements without skipping.
-// Compare it against the vanilla query: curl http://localhost:9222/json
+// TODO: This doesn't work for domains or query params with kanji.
+// The matcher itself does work (regex is working), but the Chrome
+// debugger returns the domains with encrypted texts so I can't
+// compare them against the matchers.
+
 type debuggerInfo struct {
 	ID                   string `json:"id"`
 	Title                string `json:"title"`
+	Type                 string `json:"type"`
 	URL                  string `json:"url"`
 	WebSocketDebuggerURL string `json:"webSocketDebuggerUrl"`
 }
 
+func getPort() int {
+	portStr, present := os.LookupEnv("CHROME_DEBUGGER_PORT")
+
+	if !present {
+		return defaultPort
+	}
+
+	port, err := strconv.Atoi(portStr)
+
+	if err != nil {
+		log.Printf(
+			"Invalid Chrome debugger port '%s' (using default port %d)",
+			portStr,
+			defaultPort,
+		)
+		return defaultPort
+	}
+
+	return port
+}
+
 var (
-	port                  = 9222
+	defaultPort           = 9222
+	port                  = getPort()
 	running               atomic.Bool
 	chromeExtensionPrefix = "chrome-extension://"
 	sleepTime             = 1000 * time.Millisecond
 )
 
-// TODO: Sadly it's not so easy to redirect the page,
-// due to all the CSP protection.
 func closePage(id string) error {
-	url := fmt.Sprintf("http://localhost:9222/json/close/%s", id)
+	url := fmt.Sprintf("http://localhost:%d/json/close/%s", port, id)
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(nil))
 	if err != nil {
@@ -71,8 +96,16 @@ func queryChromeDebugger(port int) ([]debuggerInfo, error) {
 	return data, nil
 }
 
-func shouldSkipURL(url string) bool {
-	return len(url) == 0 || strings.HasPrefix(url, chromeExtensionPrefix)
+func shouldSkip(item debuggerInfo) bool {
+	if len(item.URL) == 0 {
+		return true
+	}
+
+	if item.Type != "page" {
+		return true
+	}
+
+	return strings.HasPrefix(item.URL, chromeExtensionPrefix)
 }
 
 func hasDebugger() bool {
@@ -84,9 +117,9 @@ func handleSite(matcher *patterns.Matcher, item debuggerInfo) {
 	if patternMatch := matcher.MatchesAny(item.URL); patternMatch != nil {
 		err := closePage(item.ID)
 		if err == nil {
-			fmt.Printf("Closed %s (matches %s)\n", item.URL, *patternMatch)
+			log.Printf("closed %s (matches '%s')", item.URL, *patternMatch)
 		} else {
-			fmt.Fprintf(os.Stderr, "failed to close page (%v)", err)
+			log.Printf("failed to close page (%v)", err)
 		}
 	}
 }
@@ -102,38 +135,28 @@ func manage(matcher *patterns.Matcher) bool {
 	}
 
 	for _, item := range data {
-		if shouldSkipURL(item.URL) {
-			continue
+		if !shouldSkip(item) {
+			handleSite(matcher, item)
 		}
-
-		handleSite(matcher, item)
 	}
 	return true
 }
 
-// TODO: See what happens when iframes are closed.
 func IdempotentStartChromeManager(matcher *patterns.Matcher) {
-	// TODO: This most likely works correctly, but do a second check.
 	if !running.CompareAndSwap(false, true) {
 		return
 	}
 
 	defer running.Store(false)
-	defer fmt.Println("chrome ended")
+	defer log.Println("Chrome monitoring finished")
 
-	// TODO: This glitches a bit because when I open a Chrome
-	// window it ends first and then starts again.
-	// Verify what's going on.
-	// TODO: Also, sometimes if I close a website, the request will fail.
-	// Verify why this happens and if it's a bug or not.
 	if !hasDebugger() {
-		// TODO: Test this branch (can be tested easily with i3 menu)
-		killer.KillAll("chrome")
-		fmt.Println("no debugger, must kill chrome")
+		process.KillAll("chrome")
+		log.Printf("No debugger (port %d), must kill Chrome", port)
 		return
 	}
 
-	fmt.Println("doing chrome. has debugger")
+	log.Println("Chrome debugger detected (monitoring initiated)")
 
 	for manage(matcher) {
 		time.Sleep(sleepTime)

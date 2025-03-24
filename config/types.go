@@ -1,13 +1,11 @@
 package config
 
-type blockList struct {
-	Name     string   `toml:"name"`
-	Domains  []string `toml:"domains"`
-	Programs []string `toml:"programs"`
-}
+import (
+	"github.com/ChrisVilches/freedxm/model"
+)
 
 type Config struct {
-	Blocklists []blockList `toml:"blocklist"`
+	Blocklists []model.BlockList `toml:"blocklist"`
 }
 
 func (c *Config) GetAllNames() []string {

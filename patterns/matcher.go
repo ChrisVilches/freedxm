@@ -2,6 +2,7 @@ package patterns
 
 import (
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 	"sync"
@@ -9,20 +10,17 @@ import (
 
 var caseInsensitiveFlag = "(?i)"
 var specialChars = []string{
-	"\\", ".", "^", "$", "(", ")", "[", "]", "{", "}", "?", "+", "|", "/"}
+	"\\", ".", "^", "$", "(", ")", "[", "]", "{", "}", "?", "*", "+", "|", "/"}
 
-// TODO: Maybe add a map so that we can first check the map, and if it's not
-// there, do a linear search.
 type Matcher struct {
 	patterns        []*regexp.Regexp
 	originalStrings []string
-	// TODO: Should this have a different kind of mutex?.
-	mu sync.Mutex
+	mu              sync.RWMutex
 }
 
 func (m *Matcher) MatchesAny(str string) *string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
 	for i, re := range m.patterns {
 		if re.MatchString(str) {
@@ -34,8 +32,8 @@ func (m *Matcher) MatchesAny(str string) *string {
 }
 
 func (m *Matcher) IsEmpty() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return len(m.patterns) == 0
 }
 
@@ -52,7 +50,7 @@ func (m *Matcher) Set(strs []string) {
 
 		re, err := wildcardToRegex(s)
 		if err != nil {
-			fmt.Println("error")
+			log.Println(err)
 		} else {
 			m.patterns = append(m.patterns, re)
 		}

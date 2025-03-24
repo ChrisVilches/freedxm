@@ -9,6 +9,7 @@ func TestMatchesAny(t *testing.T) {
 	matcher.Set([]string{
 		"host.com", "hello", "world",
 		"foo%", "bar", "bonjour%%%friend.%%", "%\\%",
+		"漢字",
 	})
 
 	tests := []struct {
@@ -27,6 +28,7 @@ func TestMatchesAny(t *testing.T) {
 		{"BonjourFriend.", &matcher.originalStrings[5]},
 		{"BonjourFriend", nil},
 		{"hola\\mundo", &matcher.originalStrings[6]},
+		{"私は漢字を", &matcher.originalStrings[7]},
 	}
 
 	for _, test := range tests {
@@ -35,6 +37,18 @@ func TestMatchesAny(t *testing.T) {
 			t.Errorf("MatchesAny(%s) = %v; want %v", test.input, result, test.expected)
 		} else if result != nil && *result != *test.expected {
 			t.Errorf("MatchesAny(%s) = %v; want %v", test.input, *result, *test.expected)
+		}
+	}
+}
+
+func TestSet(t *testing.T) {
+	var matcher Matcher
+	strs := []string{"89856", "!\"#$%&'()~*=~|{}`*P+<>><'"}
+	matcher.Set(strs)
+	for _, test := range strs {
+		result := matcher.MatchesAny(test)
+		if result == nil {
+			t.Errorf("MatchesAny(%s) should have matched, but got nil", test)
 		}
 	}
 }

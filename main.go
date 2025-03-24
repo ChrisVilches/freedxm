@@ -1,178 +1,153 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/ChrisVilches/freedxm/chrome"
-	"github.com/ChrisVilches/freedxm/config"
-	"github.com/ChrisVilches/freedxm/fileutil"
-	"github.com/ChrisVilches/freedxm/killer"
+	"github.com/ChrisVilches/freedxm/http"
+	"github.com/ChrisVilches/freedxm/model"
 	"github.com/ChrisVilches/freedxm/patterns"
 	"github.com/ChrisVilches/freedxm/process"
-	"github.com/ChrisVilches/freedxm/session"
+	"github.com/ChrisVilches/freedxm/util"
+	"github.com/urfave/cli/v3"
 )
 
-var procBlackList patterns.Matcher
+var processMatcher patterns.Matcher
 var domainsMatcher patterns.Matcher
+var defaultPort = 8687
+var secondsInMinute int = 60
 
-func handleProcess(proc process.Process) {
+func handleProcesses(procName string) {
 	if !domainsMatcher.IsEmpty() {
-		if proc.Name == "chrome" {
+		if procName == "chrome" {
 			go chrome.IdempotentStartChromeManager(&domainsMatcher)
 		}
-		if proc.Name == "firefox" {
-			fmt.Println("handle firefox (dummy logic)")
+		if procName == "firefox" {
+			log.Println("handle firefox (dummy logic)")
 		}
 	}
 
-	// TODO: Maybe we need a more strict matching mechanism here, because
-	// some keywords may try to kill a lot of processes that we don't want to kill.
-
-	// TODO: again, using an inconsistent term "black list"
-	if procBlackList.MatchesAny(proc.Name) != nil {
-		killer.KillAll(proc.Name)
+	if processMatcher.MatchesAny(procName) != nil {
+		process.KillAll(procName)
 	}
 }
 
-func onePoll() error {
-	// TODO: These process names are unique (but if there are multiple, the PIDs are simplified to
-	// only one instance of the process, so information is lost).
-	// Somehow make it more clear what this function does.
-	result, err := process.GetProcessList()
-
-	if err != nil {
-		return err
-	}
-
-	for _, proc := range result {
-		handleProcess(proc)
-	}
-
-	return nil
-}
-
-func shouldPoll() bool {
-	return !domainsMatcher.IsEmpty() || !procBlackList.IsEmpty()
-}
-
-var cond sync.Cond
+var pollCondMtx sync.Mutex
+var pollCondVar util.CondVar
 
 func pollingProcess() {
-	var mu sync.Mutex
-	cond = *sync.NewCond(&mu)
+	pollCondVar = *util.NewCondVar(&pollCondMtx)
 
 	for {
-		// TODO: Audit this cond Lock/Unlock mechanism, and
-		// it's thread safe or not.
-		cond.L.Lock()
-		if !shouldPoll() {
-			fmt.Println("Stopped")
-			cond.Wait()
-			fmt.Println("Continued from cond.Wait()")
-		}
+		pollCondVar.WaitUntil(func() bool {
+			return !domainsMatcher.IsEmpty() || !processMatcher.IsEmpty()
+		})
 
-		fmt.Println()
-		// TODO: Test this behaves as a critical zone because we can't add new elements while it's polling.
-		// ^^^ I think it's fine. The matcher setters and getters are guarded, and sometimes there might be a slight
-		// delay between the domain settings and the actual polling results but it will be corrected in one tick.
-		err := onePoll()
+		result, err := process.GetProcessNames()
 
 		if err != nil {
-			fmt.Fprint(os.Stderr, err)
+			log.Print(err)
 			return
 		}
 
-		// TODO: Why did i put this unlock here? does
-		// exiting .Wait Lock it?
-		cond.L.Unlock()
+		for _, proc := range result {
+			handleProcesses(proc)
+		}
+
 		time.Sleep(1 * time.Second)
 	}
 }
 
-// The mechanism to update matchers is designed to be concurrent but not fully synchronized.
-// Any synchronization issues will be resolved in the next polling cycle. The most critical
-// operations, such as setting or traversing matchers, are protected by mutexes to ensure
-// thread safety.
+// The mechanism to update matchers is designed to be concurrent but not fully
+// synchronized. Any synchronization issues will be resolved in the next polling
+// cycle. The most critical operations, such as setting or traversing matchers,
+// are protected by mutexes to ensure thread safety.
 
-// TODO: i use the terms "proc" and "programs". Choose just one.
-func setMatchers(proc, domains []string) {
-	procBlackList.Set(proc)
+func setMatchers(processes, domains []string) {
+	pollCondMtx.Lock()
+	defer pollCondMtx.Unlock()
+
+	processMatcher.Set(processes)
 	domainsMatcher.Set(domains)
-	fmt.Println(proc, domains)
-	cond.Signal()
+	log.Println("processes:", processes, "domains:", domains)
+	pollCondVar.Signal()
 }
 
-var pipePath = "/tmp/freedxm"
-var currSessions session.CurrentSessions
+func serve(_ context.Context, cmd *cli.Command) error {
+	port := int(cmd.Int("port"))
+	currSessions := model.NewCurrentSessions()
 
-func listenNewSessions() {
-	var muSessions sync.Mutex
+	go pollingProcess()
+	go http.StartHTTPServer(port, &currSessions)
 
-	sessionsCh, errCh := fileutil.ReadFromPipe[session.Session](pipePath)
-
-	for {
-		select {
-		case s := <-sessionsCh:
-			muSessions.Lock()
-			sessionID := currSessions.Add(s)
-			merged := currSessions.MergeLists()
-			setMatchers(merged.Programs, merged.Domains)
-			muSessions.Unlock()
-
-			time.AfterFunc(time.Duration(s.TimeSeconds)*time.Second, func() {
-				muSessions.Lock()
-				currSessions.Remove(sessionID)
-				merged := currSessions.MergeLists()
-				setMatchers(merged.Programs, merged.Domains)
-				muSessions.Unlock()
-			})
-		case err := <-errCh:
-			fmt.Fprintln(os.Stderr, "Error reading from pipe:", err)
-			return
-		}
+	for merged := range currSessions.MergedCh {
+		setMatchers(merged.Processes, merged.Domains)
 	}
+
+	return fmt.Errorf(
+		"unexpected termination: the service process should run indefinitely",
+	)
 }
 
-// TODO: This will be the command in the actual CLI app, but
-// refine its functionality first obviously.
-func handleAddSessionCommand(blockListName string) {
-	blockList, err := config.GetBlockListByName(blockListName)
-	if err != nil {
-		fmt.Println(err)
-		e, ok := err.(*config.BlockListNotFoundError)
-		if ok {
-			fmt.Println("here are the available names", e.AvailableNames)
-		}
-		return
-	}
-
-	data := session.Session{
-		TimeSeconds: 10,
-		Programs:    blockList.Programs,
-		Domains:     blockList.Domains,
-	}
-	err = fileutil.WriteToPipe(pipePath, data)
-	if err != nil {
-		fmt.Println(err)
-	}
+func addSession(_ context.Context, cmd *cli.Command) error {
+	port := cmd.Int("port")
+	seconds := int(cmd.Int("minutes")) * secondsInMinute
+	blockListNames := cmd.StringSlice("block-lists")
+	return http.CreateSession(int(port), seconds, blockListNames)
 }
 
 func main() {
-	blockListName, present := os.LookupEnv("A")
-	if present {
-		handleAddSessionCommand(blockListName)
-		return
+	cmd := &cli.Command{
+		Commands: []*cli.Command{
+			{
+				Name:    "serve",
+				Aliases: []string{"s"},
+				Usage:   "Start the server",
+				Flags: []cli.Flag{
+					&cli.IntFlag{
+						Name:    "port",
+						Aliases: []string{"p"},
+						Value:   int64(defaultPort),
+						Usage:   "Port number to listen on",
+					},
+				},
+				Action: serve,
+			},
+			{
+				Name:    "new",
+				Aliases: []string{"n"},
+				Usage:   "Creates new blocking session",
+				Flags: []cli.Flag{
+					&cli.IntFlag{
+						Name:     "minutes",
+						Aliases:  []string{"m"},
+						Required: true,
+						Usage:    "Number of minutes",
+					},
+					&cli.StringSliceFlag{
+						Name:     "block-lists",
+						Aliases:  []string{"b"},
+						Required: true,
+						Usage:    "Block lists to use",
+					},
+					&cli.IntFlag{
+						Name:    "port",
+						Aliases: []string{"p"},
+						Value:   int64(defaultPort),
+						Usage:   "Port where the service is running on",
+					},
+				},
+				Action: addSession,
+			},
+		},
 	}
 
-	currSessions = session.NewCurrentSessions()
-
-	fileutil.ResetFile(pipePath)
-
-	go pollingProcess()
-	go listenNewSessions()
-
-	select {}
+	if err := cmd.Run(context.Background(), os.Args); err != nil {
+		log.Fatal(err)
+	}
 }

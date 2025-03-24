@@ -4,8 +4,10 @@ import (
 	"fmt"
 
 	"github.com/ChrisVilches/freedxm/fileutil"
+	"github.com/ChrisVilches/freedxm/model"
 )
 
+// TODO: Should be configurable.
 var configFilePath = "./conf/block-lists.toml"
 
 type BlockListNotFoundError struct {
@@ -14,10 +16,10 @@ type BlockListNotFoundError struct {
 }
 
 func (e *BlockListNotFoundError) Error() string {
-	return fmt.Sprintf("no blocklist found with name: %s", e.wrongName)
+	return fmt.Sprintf("no blocklist found with name '%s'", e.wrongName)
 }
 
-func GetBlockListByName(name string) (*blockList, error) {
+func GetBlockListByName(name string) (*model.BlockList, error) {
 	config, err := fileutil.ReadTomlFile[Config](configFilePath)
 
 	if err != nil {

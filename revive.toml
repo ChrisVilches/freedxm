@@ -17,6 +17,10 @@ enableAllRules = true
 
 [rule.line-length-limit]
   arguments = [80]
+  Exclude=["TEST"]
+
+[rule.cognitive-complexity]
+  Exclude=["TEST"]
 
 [rule.add-constant]
   arguments = [{ maxLitCount = "1000", allowInts = "0,1,2" }]

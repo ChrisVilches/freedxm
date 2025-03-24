@@ -5,62 +5,40 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 )
 
-type Process struct {
-	PID  int
-	Name string
-}
+var statRegex = regexp.MustCompile(`^\d+\s\(([^)]+)\)`)
+var requiredMatchElements = 2
 
-// TODO: Does this include all possible process names? I think so, but verify
-var statRegex = regexp.MustCompile(`^(\d+)\s\(([^)]+)\)`)
-
-// TODO: Note, one thing I had in mind is to do a not so frequent polling but increase the polling
-// if the user is active (moving mouse or keyboard), that would put some weight on the mouse hooks though,
-// but I don't know. It's an idea to explore. But I think this would only happen during a blocking session,
-// not at all times, even if I run this process as a long-running service.
-
-// TODO: Works, but it should state that the names are unique. Maybe make it configurable by parameters or change the function name.
-func GetProcessList() ([]Process, error) {
+func GetProcessNames() ([]string, error) {
 	procDirs, err := filepath.Glob("/proc/[0-9]*/stat")
 	if err != nil {
 		return nil, err
 	}
 
-	result := []Process{}
-	// TODO: This "set" is trash. Is there a better way???
-	addedNames := map[string]struct{}{}
+	names := map[string]struct{}{}
 
 	for _, procFile := range procDirs {
 		data, err := os.ReadFile(procFile)
 		if err != nil {
-			// TODO: This "ignore errors" is a bit suspicious.
-			continue // Ignore errors (process may have exited)
+			continue
 		}
 
 		match := statRegex.FindStringSubmatch(string(data))
 
-		if len(match) < 3 {
-			// TODO: I think it should return error here (assuming all lines should have the desired format).
-			// but perhaps not all lines have the expected format, in that case it'd be better to ignore it
-			// and log the error.
-			return nil, fmt.Errorf("no match")
+		if len(match) < requiredMatchElements {
+			return nil, fmt.Errorf(
+				"failed to parse /proc/[pid]/stat file: unexpected format",
+			)
 		}
 
-		// TODO: Verify this is doing something. It should make them unique (by name).
-		if _, exists := addedNames[match[2]]; exists {
-			continue
-		}
+		names[match[1]] = struct{}{}
+	}
 
-		pid, err := strconv.Atoi(match[1])
+	result := []string{}
 
-		if err != nil {
-			return nil, fmt.Errorf("cannot convert PID (%v)", err)
-		}
-
-		result = append(result, Process{PID: pid, Name: match[2]})
-		addedNames[match[2]] = struct{}{}
+	for name := range names {
+		result = append(result, name)
 	}
 
 	return result, nil
