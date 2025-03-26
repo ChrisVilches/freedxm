@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ChrisVilches/freedxm/chrome"
@@ -22,15 +22,16 @@ var processMatcher patterns.Matcher
 var domainsMatcher patterns.Matcher
 var defaultPort = 8687
 var secondsInMinute int = 60
-
-var chromeMonitor = util.NewIdempotentRunner(func() {
-	chrome.MonitorChrome(&domainsMatcher)
+var doPoll = make(chan struct{}, 1)
+var activePoll atomic.Bool
+var chromeMonitor = util.NewIdempotentRunner(func(ctx context.Context) {
+	chrome.MonitorChrome(ctx, &domainsMatcher)
 })
 
-func handleProcesses(procName string) {
+func handleProcesses(ctx context.Context, procName string) {
 	if !domainsMatcher.IsEmpty() {
 		if procName == "chrome" {
-			go chromeMonitor.Run()
+			go chromeMonitor.Run(ctx)
 		}
 		if procName == "firefox" {
 			log.Println("handle firefox (dummy logic)")
@@ -42,29 +43,34 @@ func handleProcesses(procName string) {
 	}
 }
 
-var pollCondMtx sync.Mutex
-var pollCondVar util.CondVar
+func sleepPoll() {
+	time.Sleep(1 * time.Second)
 
-func pollingProcess() {
-	pollCondVar = *util.NewCondVar(&pollCondMtx)
+	if !domainsMatcher.IsEmpty() || !processMatcher.IsEmpty() {
+		doPoll <- struct{}{}
+	} else {
+		activePoll.Store(false)
+	}
+}
 
+func pollingProcess(ctx context.Context) error {
 	for {
-		pollCondVar.WaitUntil(func() bool {
-			return !domainsMatcher.IsEmpty() || !processMatcher.IsEmpty()
-		})
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-doPoll:
+			result, err := process.GetProcessNames()
 
-		result, err := process.GetProcessNames()
+			if err != nil {
+				return err
+			}
 
-		if err != nil {
-			log.Print(err)
-			return
+			for _, proc := range result {
+				handleProcesses(ctx, proc)
+			}
+
+			go sleepPoll()
 		}
-
-		for _, proc := range result {
-			handleProcesses(proc)
-		}
-
-		time.Sleep(1 * time.Second)
 	}
 }
 
@@ -74,29 +80,36 @@ func pollingProcess() {
 // are protected by mutexes to ensure thread safety.
 
 func setMatchers(processes, domains []string) {
-	pollCondMtx.Lock()
-	defer pollCondMtx.Unlock()
-
 	processMatcher.Set(processes)
 	domainsMatcher.Set(domains)
 	log.Println("processes:", processes, "domains:", domains)
-	pollCondVar.Signal()
+
+	if activePoll.CompareAndSwap(false, true) {
+		doPoll <- struct{}{}
+	}
 }
 
-func serve(_ context.Context, cmd *cli.Command) error {
+func serve(ctx context.Context, cmd *cli.Command) error {
 	port := int(cmd.Int("port"))
 	currSessions := model.NewCurrentSessions()
+	errCh := make(chan error, 2)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	go pollingProcess()
-	go rpc.GRPCServerStart(port, &currSessions)
+	go func() { errCh <- pollingProcess(ctx) }()
+	go func() { errCh <- rpc.GRPCServerStart(ctx, port, &currSessions) }()
 
-	for merged := range currSessions.MergedCh {
-		setMatchers(merged.Processes, merged.Domains)
+	for {
+		select {
+		case err := <-errCh:
+			return fmt.Errorf("unexpected termination: %v", err)
+		case merged, ok := <-currSessions.MergedCh:
+			if !ok {
+				return fmt.Errorf("MergedCh closed unexpectedly")
+			}
+			setMatchers(merged.Processes, merged.Domains)
+		}
 	}
-
-	return fmt.Errorf(
-		"unexpected termination: the service process should run indefinitely",
-	)
 }
 
 func addSession(_ context.Context, cmd *cli.Command) error {

@@ -82,17 +82,30 @@ func (s *service) FetchSessions(
 	return &pb.SessionList{Sessions: result}, nil
 }
 
-func GRPCServerStart(port int, currSessions *model.CurrentSessions) {
+func GRPCServerStart(
+	ctx context.Context,
+	port int,
+	currSessions *model.CurrentSessions,
+) error {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
+		return err
 	}
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterServiceServer(grpcServer, &service{currSessions: currSessions})
 
 	log.Printf("gRPC server is running on port %d...", port)
-	if err := grpcServer.Serve(listener); err != nil {
-		log.Fatalf("Failed to serve: %v", err)
+
+	serverErr := make(chan error)
+
+	go func() { serverErr <- grpcServer.Serve(listener) }()
+
+	select {
+	case <-ctx.Done():
+		grpcServer.GracefulStop()
+		return ctx.Err()
+	case err := <-serverErr:
+		return err
 	}
 }
