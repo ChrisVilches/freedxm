@@ -2,9 +2,9 @@
 
 Freedom Port for Linux. Block Websites, Apps, and the Internet.
 
-## What is Freedom?
+## What is Freedxm?
 
-Official website: [https://freedom.to/](https://freedom.to/)
+This software is a Linux adaptation of [Freedom](https://freedom.to/):
 
 > Easily block distracting websites and apps on any device. The original and best website blocker, Freedom helps you be more focused and productive.
 
@@ -59,7 +59,7 @@ For more information, refer to the help command:
 
 - **WebSocket Control**: Chrome tabs/pages are controlled using WebSockets, eliminating the need for polling.
 - **Remote Debugging**: Requires Chrome to operate in debugging mode. If a session is active and Chrome isn't in debugging mode, it will be terminated.
-- **Domain Blocking**: Domains are blocked using Chrome's remote debugging mode, avoiding direct network interaction.
+- **Domain Blocking**: Domains are blocked using Chrome's remote debugging mode, which allows for domain blocking without the need for direct network interaction such as using proxies or iptables.
 
 ### Process Management
 
