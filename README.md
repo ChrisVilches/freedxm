@@ -8,7 +8,7 @@ This software is a Linux adaptation of [Freedom](https://freedom.to/):
 
 > Easily block distracting websites and apps on any device. The original and best website blocker, Freedom helps you be more focused and productive.
 
-The Freedom application, known for blocking distracting apps and websites to enhance productivity, was not available for Linux users. The challenge was taken on to port the Freedom application to Linux, enabling its functionality on this platform. This involved devising native methods to effectively block applications and websites on Linux, such as using Chrome's remote debugging mode and process termination techniques. As a result, Linux users can now benefit from increased productivity by reducing distractions through this newly ported application.
+The Freedom application, known for blocking distracting apps and websites to enhance productivity, was not available for Linux users. The challenge was taken on to port the Freedom application to Linux, enabling its functionality on this platform. This involved devising native methods to effectively block applications and websites on Linux, such as using Chrome's remote debugging mode and process termination techniques. As a result, Linux users can now benefit from increased productivity by reducing distractions through this ported application.
 
 ## Configuration
 
