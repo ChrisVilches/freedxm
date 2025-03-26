@@ -33,7 +33,6 @@ const (
 
 var commandID atomic.Int32
 
-// TODO: Test this one a bit more.
 func createConnection(ctx context.Context) (*websocket.Conn, error) {
 	wsURL, err := getBrowserWebSocketURL()
 	if err != nil {
