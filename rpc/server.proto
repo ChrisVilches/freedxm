@@ -1,0 +1,28 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+option go_package = "rpc/pb";
+
+package freedxm;
+
+service Service {
+  rpc CreateSession(NewSessionRequest) returns (google.protobuf.Empty);
+  rpc FetchSessions(google.protobuf.Empty) returns (SessionList);
+}
+
+message NewSessionRequest {
+  repeated string blockLists = 1;
+  int32 timeSeconds = 2;
+}
+
+message BlockList {
+  string name = 1;
+  repeated string domains = 2;
+  repeated string processes = 3;
+}
+
+message Session {
+  int32 timeSeconds = 1;
+  repeated BlockList blockLists = 2;
+}
+
+message SessionList { repeated Session sessions = 1; }

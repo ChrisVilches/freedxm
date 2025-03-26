@@ -9,12 +9,13 @@ import (
 	"time"
 
 	"github.com/ChrisVilches/freedxm/chrome"
-	"github.com/ChrisVilches/freedxm/http"
 	"github.com/ChrisVilches/freedxm/model"
 	"github.com/ChrisVilches/freedxm/patterns"
 	"github.com/ChrisVilches/freedxm/process"
+	"github.com/ChrisVilches/freedxm/rpc/implementation"
 	"github.com/ChrisVilches/freedxm/util"
 	"github.com/urfave/cli/v3"
+	"google.golang.org/grpc/status"
 )
 
 var processMatcher patterns.Matcher
@@ -22,10 +23,14 @@ var domainsMatcher patterns.Matcher
 var defaultPort = 8687
 var secondsInMinute int = 60
 
+var chromeMonitor = util.NewIdempotentRunner(func() {
+	chrome.MonitorChrome(&domainsMatcher)
+})
+
 func handleProcesses(procName string) {
 	if !domainsMatcher.IsEmpty() {
 		if procName == "chrome" {
-			go chrome.IdempotentStartChromeManager(&domainsMatcher)
+			go chromeMonitor.Run()
 		}
 		if procName == "firefox" {
 			log.Println("handle firefox (dummy logic)")
@@ -83,7 +88,7 @@ func serve(_ context.Context, cmd *cli.Command) error {
 	currSessions := model.NewCurrentSessions()
 
 	go pollingProcess()
-	go http.StartHTTPServer(port, &currSessions)
+	go rpc.GRPCServerStart(port, &currSessions)
 
 	for merged := range currSessions.MergedCh {
 		setMatchers(merged.Processes, merged.Domains)
@@ -98,7 +103,17 @@ func addSession(_ context.Context, cmd *cli.Command) error {
 	port := cmd.Int("port")
 	seconds := int(cmd.Int("minutes")) * secondsInMinute
 	blockListNames := cmd.StringSlice("block-lists")
-	return http.CreateSession(int(port), seconds, blockListNames)
+	return rpc.CreateSession(int(port), seconds, blockListNames)
+}
+
+func listSessions(_ context.Context, cmd *cli.Command) error {
+	port := int(cmd.Int("port"))
+	sessions, err := rpc.ListSessions(port)
+	if err != nil {
+		return err
+	}
+	log.Println(sessions)
+	return nil
 }
 
 func main() {
@@ -144,10 +159,33 @@ func main() {
 				},
 				Action: addSession,
 			},
+			{
+				Name:    "list",
+				Aliases: []string{"ls"},
+				Usage:   "List active sessions",
+				Flags: []cli.Flag{
+					&cli.IntFlag{
+						Name:    "port",
+						Aliases: []string{"p"},
+						Value:   int64(defaultPort),
+						Usage:   "Port where the service is running on",
+					},
+				},
+				Action: listSessions,
+			},
 		},
 	}
 
-	if err := cmd.Run(context.Background(), os.Args); err != nil {
-		log.Fatal(err)
+	err := cmd.Run(context.Background(), os.Args)
+
+	if err == nil {
+		return
 	}
+
+	if grpcErr, ok := status.FromError(err); ok {
+		// TODO: Nice, but make it a tad prettier
+		log.Fatalf("gRPC Error: %s", grpcErr.Message())
+	}
+
+	log.Fatal(err)
 }

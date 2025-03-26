@@ -1,26 +1,37 @@
 package config
 
 import (
-	"fmt"
+	"os"
+	"path"
 
 	"github.com/ChrisVilches/freedxm/fileutil"
 	"github.com/ChrisVilches/freedxm/model"
 )
 
-// TODO: Should be configurable.
-var configFilePath = "./conf/block-lists.toml"
-
-type BlockListNotFoundError struct {
-	wrongName      string
-	AvailableNames []string
+func getDefaultConfigFilePath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return path.Join(home, ".config", "freedxm.toml"), nil
 }
 
-func (e *BlockListNotFoundError) Error() string {
-	return fmt.Sprintf("no blocklist found with name '%s'", e.wrongName)
+func getConfigFilePath() (string, error) {
+	str, present := os.LookupEnv("CONFIG_FILEPATH")
+
+	if !present {
+		return getDefaultConfigFilePath()
+	}
+
+	return str, nil
 }
 
 func GetBlockListByName(name string) (*model.BlockList, error) {
-	config, err := fileutil.ReadTomlFile[Config](configFilePath)
+	filepath, err := getConfigFilePath()
+	if err != nil {
+		return nil, err
+	}
+	config, err := fileutil.ReadTomlFile[Config](filepath)
 
 	if err != nil {
 		return nil, err
@@ -32,8 +43,5 @@ func GetBlockListByName(name string) (*model.BlockList, error) {
 		}
 	}
 
-	return nil, &BlockListNotFoundError{
-		wrongName:      name,
-		AvailableNames: config.GetAllNames(),
-	}
+	return nil, nil
 }

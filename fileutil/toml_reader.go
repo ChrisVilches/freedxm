@@ -1,6 +1,7 @@
 package fileutil
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/BurntSushi/toml"
@@ -25,7 +26,7 @@ func ReadTomlFile[T any](filename string) (*T, error) {
 	_, err = toml.Decode(tomlData, &result)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not read config file: %v", err)
 	}
 
 	return &result, nil

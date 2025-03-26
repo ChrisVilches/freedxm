@@ -33,10 +33,9 @@ func TestMatchesAny(t *testing.T) {
 
 	for _, test := range tests {
 		result := matcher.MatchesAny(test.input)
-		if (result == nil && test.expected != nil) || (result != nil && test.expected == nil) {
+
+		if result != test.expected {
 			t.Errorf("MatchesAny(%s) = %v; want %v", test.input, result, test.expected)
-		} else if result != nil && *result != *test.expected {
-			t.Errorf("MatchesAny(%s) = %v; want %v", test.input, *result, *test.expected)
 		}
 	}
 }
