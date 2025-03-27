@@ -20,7 +20,8 @@ import (
 
 type service struct {
 	pb.UnimplementedServiceServer
-	currSessions *model.CurrentSessions
+	currSessions      *model.CurrentSessions
+	sessionsUpdatedCh chan<- struct{}
 }
 
 func (s *service) CreateSession(
@@ -48,17 +49,19 @@ func (s *service) CreateSession(
 		BlockLists:  blockLists,
 	})
 
+	s.sessionsUpdatedCh <- struct{}{}
+
 	log.Println("Session started")
 
 	time.AfterFunc(time.Duration(req.TimeSeconds)*time.Second, func() {
 		log.Println("Session finished")
 		s.currSessions.Remove(sessionID)
+		s.sessionsUpdatedCh <- struct{}{}
 	})
 
 	return &emptypb.Empty{}, nil
 }
 
-// TODO: Implement returning "time left" as well.
 func (s *service) FetchSessions(
 	_ context.Context,
 	_ *emptypb.Empty,
@@ -86,6 +89,7 @@ func GRPCServerStart(
 	ctx context.Context,
 	port int,
 	currSessions *model.CurrentSessions,
+	sessionsUpdatedCh chan<- struct{},
 ) error {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
@@ -93,7 +97,13 @@ func GRPCServerStart(
 	}
 
 	grpcServer := grpc.NewServer()
-	pb.RegisterServiceServer(grpcServer, &service{currSessions: currSessions})
+
+	serv := &service{
+		currSessions:      currSessions,
+		sessionsUpdatedCh: sessionsUpdatedCh,
+	}
+
+	pb.RegisterServiceServer(grpcServer, serv)
 
 	log.Printf("gRPC server is running on port %d...", port)
 

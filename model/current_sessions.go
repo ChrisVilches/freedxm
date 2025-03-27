@@ -14,7 +14,6 @@ type MergeResult struct {
 type CurrentSessions struct {
 	currID   uint32
 	sessions map[uint32]Session
-	MergedCh chan MergeResult
 	mu       sync.Mutex
 }
 
@@ -22,7 +21,6 @@ func NewCurrentSessions() CurrentSessions {
 	return CurrentSessions{
 		currID:   0,
 		sessions: make(map[uint32]Session),
-		MergedCh: make(chan MergeResult),
 	}
 }
 
@@ -37,32 +35,25 @@ func (c *CurrentSessions) GetAll() []Session {
 	return ret
 }
 
-func (c *CurrentSessions) notify() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.MergedCh <- c.mergeLists()
-}
-
 func (c *CurrentSessions) Add(session Session) uint32 {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.currID++
 	c.sessions[c.currID] = session
-	go c.notify()
 	return c.currID
 }
 
 func (c *CurrentSessions) Remove(id uint32) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-
-	go c.notify()
 	delete(c.sessions, id)
 }
 
-func (c *CurrentSessions) mergeLists() MergeResult {
+func (c *CurrentSessions) MergeLists() MergeResult {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	uniqDomains := make(map[string]struct{})
 	uniqProcesses := make(map[string]struct{})
 

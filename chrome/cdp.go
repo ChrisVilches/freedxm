@@ -14,6 +14,7 @@ import (
 const (
 	defaultPort           = 9222
 	chromeExtensionPrefix = "chrome-extension://"
+	wsChSize              = 10
 	// TODO: this is not going to work on all environments.
 	// Maybe one way to solve this issue
 	// is to read the HTML files beforehand and then send the
@@ -33,7 +34,7 @@ const (
 
 var commandID atomic.Int32
 
-func createConnection(ctx context.Context) (*websocket.Conn, error) {
+func createConnection() (*websocket.Conn, error) {
 	wsURL, err := getBrowserWebSocketURL()
 	if err != nil {
 		return nil, err
@@ -42,13 +43,6 @@ func createConnection(ctx context.Context) (*websocket.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	go func() {
-		<-ctx.Done()
-		if c != nil {
-			c.Close()
-		}
-	}()
 
 	return c, nil
 }
@@ -87,8 +81,26 @@ func handleResponse(
 	}
 }
 
-func MonitorChrome(ctx context.Context, matcher *patterns.Matcher) {
-	conn, err := createConnection(ctx)
+func getMsgsFromConnection(conn *websocket.Conn) <-chan cdpResponse {
+	ch := make(chan cdpResponse, wsChSize)
+	go func() {
+		for {
+			response, err := readResponse(conn)
+			if err != nil {
+				close(ch)
+				return
+			}
+			ch <- response
+		}
+	}()
+	return ch
+}
+
+// When a session starts, it blocks existing tabs using the target
+// attaching mechanism. For additional sessions, an "update" event
+// triggers, attempting to block all tabs that match the new domain blocklist.
+func MonitorChrome(ctx context.Context, matcher *patterns.Matcher, updateCh <-chan struct{}) {
+	conn, err := createConnection()
 	if err != nil {
 		handleNoDebugger()
 		return
@@ -104,20 +116,27 @@ func MonitorChrome(ctx context.Context, matcher *patterns.Matcher) {
 	)
 
 	log.Println("started monitoring chrome")
-	defer log.Println("finished monitoring chrome")
+
+	responseCh := getMsgsFromConnection(conn)
 
 	for {
-		response, err := readResponse(conn)
-		if err != nil {
-			log.Println("could not read response (CDP websocket)")
-			break
-		}
+		select {
+		case <-ctx.Done():
+			log.Println("finished chrome monitoring (context done)")
+			return
+		case <-updateCh:
+			if matcher.IsEmpty() {
+				log.Println("finished chrome monitoring (no blocked domains)")
+				return
+			}
+			blockTargetIfMatchesAll(conn, matcher)
+		case response, ok := <-responseCh:
+			if !ok {
+				log.Println("websocket channel closed")
+				return
+			}
 
-		if matcher.IsEmpty() {
-			log.Println("finished chrome monitoring (no blocked domains)")
-			break
+			handleResponse(response, conn, matcher)
 		}
-
-		handleResponse(response, conn, matcher)
 	}
 }

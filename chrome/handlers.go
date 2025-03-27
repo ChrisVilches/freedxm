@@ -8,7 +8,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var activeTabs = make(map[string]string)
+var activeTabs = make(map[string]targetSession)
 
 // NOTE: This event is triggered even for targets that
 // were skipped during attachment.
@@ -48,17 +48,13 @@ func handleAttachedToTarget(
 	response cdpResponse,
 	matcher *patterns.Matcher,
 ) {
-	type T struct {
-		SessionID  string     `json:"sessionId"`
-		TargetInfo targetInfo `json:"targetInfo"`
-	}
-	params, err := util.Unmarshal[T](response.Params)
+	params, err := util.Unmarshal[targetSession](response.Params)
 	if err != nil {
 		return
 	}
 
-	activeTabs[params.TargetInfo.TargetID] = params.SessionID
-	blockTargetIfMatches(params.TargetInfo, params.SessionID, conn, matcher)
+	activeTabs[params.TargetInfo.TargetID] = params
+	blockTargetIfMatches(params, conn, matcher)
 }
 
 func shouldSkip(targetInfo targetInfo) bool {
@@ -74,21 +70,28 @@ func shouldSkip(targetInfo targetInfo) bool {
 }
 
 func blockTargetIfMatches(
-	targetInfo targetInfo,
-	sessionID string,
+	targetSession targetSession,
 	conn *websocket.Conn,
 	matcher *patterns.Matcher,
 ) {
-	if shouldSkip(targetInfo) {
+	if shouldSkip(targetSession.TargetInfo) {
 		return
 	}
 
-	if patternMatch := matcher.MatchesAny(targetInfo.URL); patternMatch != nil {
+	patternMatch := matcher.MatchesAny(targetSession.TargetInfo.URL)
+
+	if patternMatch != nil {
 		executeCmd("Page.navigate",
-			sessionID,
+			targetSession.SessionID,
 			conn,
 			map[string]any{"url": redirectURL},
 		)
+	}
+}
+
+func blockTargetIfMatchesAll(conn *websocket.Conn, matcher *patterns.Matcher) {
+	for _, targetSession := range activeTabs {
+		blockTargetIfMatches(targetSession, conn, matcher)
 	}
 }
 
@@ -106,7 +109,10 @@ func handleTargetInfoChanged(
 		return
 	}
 
-	if sessionID, exists := activeTabs[params.TargetInfo.TargetID]; exists {
-		blockTargetIfMatches(params.TargetInfo, sessionID, conn, matcher)
+	if targetSession, exists := activeTabs[params.TargetInfo.TargetID]; exists {
+		targetSession.TargetInfo = params.TargetInfo
+		activeTabs[params.TargetInfo.TargetID] = targetSession
+
+		blockTargetIfMatches(targetSession, conn, matcher)
 	}
 }

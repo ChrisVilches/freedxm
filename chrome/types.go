@@ -19,3 +19,8 @@ type targetInfo struct {
 	Type     string `json:"type"`
 	URL      string `json:"url"`
 }
+
+type targetSession struct {
+	SessionID  string     `json:"sessionId"`
+	TargetInfo targetInfo `json:"targetInfo"`
+}

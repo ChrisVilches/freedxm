@@ -1,5 +1,10 @@
 package main
 
+// The mechanism to update matchers is designed to be concurrent but not fully
+// synchronized. Any synchronization issues will be resolved in the next polling
+// cycle. The most critical operations, such as setting or traversing matchers,
+// are protected by mutexes to ensure thread safety.
+
 import (
 	"context"
 	"fmt"
@@ -21,14 +26,17 @@ import (
 var processMatcher patterns.Matcher
 var domainsMatcher patterns.Matcher
 var defaultPort = 8687
-var secondsInMinute int = 60
+var secondsInMinute = 60
 var doPoll = make(chan struct{}, 1)
 var activePoll atomic.Bool
+
+var chromeCh = make(chan struct{})
+
 var chromeMonitor = util.NewIdempotentRunner(func(ctx context.Context) {
-	chrome.MonitorChrome(ctx, &domainsMatcher)
+	chrome.MonitorChrome(ctx, &domainsMatcher, chromeCh)
 })
 
-func handleProcesses(ctx context.Context, procName string) {
+func handleProcess(ctx context.Context, procName string) {
 	if !domainsMatcher.IsEmpty() {
 		if procName == "chrome" {
 			go chromeMonitor.Run(ctx)
@@ -66,18 +74,13 @@ func pollingProcess(ctx context.Context) error {
 			}
 
 			for _, proc := range result {
-				handleProcesses(ctx, proc)
+				handleProcess(ctx, proc)
 			}
 
 			go sleepPoll()
 		}
 	}
 }
-
-// The mechanism to update matchers is designed to be concurrent but not fully
-// synchronized. Any synchronization issues will be resolved in the next polling
-// cycle. The most critical operations, such as setting or traversing matchers,
-// are protected by mutexes to ensure thread safety.
 
 func setMatchers(processes, domains []string) {
 	processMatcher.Set(processes)
@@ -89,27 +92,42 @@ func setMatchers(processes, domains []string) {
 	}
 }
 
+func listenSessionsUpdated(
+	currSessions *model.CurrentSessions,
+	sessionsUpdatedCh <-chan struct{},
+) {
+	observers := []chan struct{}{chromeCh}
+	for {
+		<-sessionsUpdatedCh
+		res := currSessions.MergeLists()
+		setMatchers(res.Processes, res.Domains)
+
+		for _, ch := range observers {
+			select {
+			case ch <- struct{}{}:
+			default:
+				log.Println("observer skipped when notifying sessions change")
+			}
+		}
+	}
+}
+
 func serve(ctx context.Context, cmd *cli.Command) error {
 	port := int(cmd.Int("port"))
+	sessionsUpdateCh := make(chan struct{})
 	currSessions := model.NewCurrentSessions()
 	errCh := make(chan error, 2)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	go func() { errCh <- pollingProcess(ctx) }()
-	go func() { errCh <- rpc.GRPCServerStart(ctx, port, &currSessions) }()
+	go func() {
+		errCh <- rpc.GRPCServerStart(ctx, port, &currSessions, sessionsUpdateCh)
+	}()
+	go listenSessionsUpdated(&currSessions, sessionsUpdateCh)
 
-	for {
-		select {
-		case err := <-errCh:
-			return fmt.Errorf("unexpected termination: %v", err)
-		case merged, ok := <-currSessions.MergedCh:
-			if !ok {
-				return fmt.Errorf("MergedCh closed unexpectedly")
-			}
-			setMatchers(merged.Processes, merged.Domains)
-		}
-	}
+	err := <-errCh
+	return fmt.Errorf("unexpected termination: %v", err)
 }
 
 func addSession(_ context.Context, cmd *cli.Command) error {
@@ -129,6 +147,8 @@ func listSessions(_ context.Context, cmd *cli.Command) error {
 	return nil
 }
 
+// TODO: Move each individual command to its own file?? That'd look a bit prettier.
+// Also, move the comment on top of this file to the file of the `serve` command.
 func main() {
 	cmd := &cli.Command{
 		Commands: []*cli.Command{
