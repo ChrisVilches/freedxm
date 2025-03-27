@@ -10,7 +10,7 @@ This software is a Linux adaptation of [Freedom](https://freedom.to/):
 
 The Freedom application, known for blocking distracting apps and websites to enhance productivity, was not available for Linux users. The challenge was taken on to port the Freedom application to Linux, enabling its functionality on this platform. This involved devising native methods to effectively block applications and websites on Linux, such as using Chrome's remote debugging mode and process termination techniques. As a result, Linux users can now benefit from increased productivity by reducing distractions through this ported application.
 
-## Get Started
+## Getting Started
 
 Create the file `~/.config/freedxm.toml` with content like this:
 
