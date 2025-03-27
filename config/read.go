@@ -4,8 +4,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/ChrisVilches/freedxm/fileutil"
 	"github.com/ChrisVilches/freedxm/model"
+	"github.com/ChrisVilches/freedxm/util"
 )
 
 func getDefaultConfigFilePath() (string, error) {
@@ -31,7 +31,7 @@ func ReadConfigFileRaw() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fileutil.ReadFileEntireContent(filepath)
+	return util.ReadFileEntireContent(filepath)
 }
 
 func GetBlockListByName(name string) (*model.BlockList, error) {
@@ -39,7 +39,7 @@ func GetBlockListByName(name string) (*model.BlockList, error) {
 	if err != nil {
 		return nil, err
 	}
-	config, err := fileutil.ReadTomlFile[Config](filepath)
+	config, err := util.ReadTomlFile[Config](filepath)
 
 	if err != nil {
 		return nil, err
