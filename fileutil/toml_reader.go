@@ -7,7 +7,7 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-func readFileEntireContent(filename string) (string, error) {
+func ReadFileEntireContent(filename string) (string, error) {
 	content, err := os.ReadFile(filename)
 	if err != nil {
 		return "", err
@@ -17,7 +17,7 @@ func readFileEntireContent(filename string) (string, error) {
 }
 
 func ReadTomlFile[T any](filename string) (*T, error) {
-	tomlData, err := readFileEntireContent(filename)
+	tomlData, err := ReadFileEntireContent(filename)
 	if err != nil {
 		return nil, err
 	}

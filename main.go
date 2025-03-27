@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/ChrisVilches/freedxm/chrome"
+	"github.com/ChrisVilches/freedxm/config"
 	"github.com/ChrisVilches/freedxm/model"
 	"github.com/ChrisVilches/freedxm/patterns"
 	"github.com/ChrisVilches/freedxm/process"
@@ -147,6 +148,16 @@ func listSessions(_ context.Context, cmd *cli.Command) error {
 	return nil
 }
 
+func showConfigFileContent(_ context.Context, _ *cli.Command) error {
+	content, err := config.ReadConfigFileRaw()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(content)
+	return nil
+}
+
 // TODO: Move each individual command to its own file?? That'd look a bit prettier.
 // Also, move the comment on top of this file to the file of the `serve` command.
 func main() {
@@ -205,6 +216,12 @@ func main() {
 					},
 				},
 				Action: listSessions,
+			},
+			{
+				Name:    "show-config",
+				Aliases: []string{"sc"},
+				Usage:   "Show config file content",
+				Action:  showConfigFileContent,
 			},
 		},
 	}

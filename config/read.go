@@ -26,6 +26,14 @@ func getConfigFilePath() (string, error) {
 	return str, nil
 }
 
+func ReadConfigFileRaw() (string, error) {
+	filepath, err := getConfigFilePath()
+	if err != nil {
+		return "", err
+	}
+	return fileutil.ReadFileEntireContent(filepath)
+}
+
 func GetBlockListByName(name string) (*model.BlockList, error) {
 	filepath, err := getConfigFilePath()
 	if err != nil {
