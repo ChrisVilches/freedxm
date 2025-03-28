@@ -48,10 +48,10 @@ func (s *service) CreateSession(
 
 	s.sessionsUpdatedCh <- struct{}{}
 
-	log.Println("Session started")
+	log.Printf("Session started (%ds, %v)", req.TimeSeconds, req.BlockLists)
 
 	time.AfterFunc(time.Duration(req.TimeSeconds)*time.Second, func() {
-		log.Println("Session finished")
+		log.Printf("Session ended (%ds, %v)", req.TimeSeconds, req.BlockLists)
 		s.currSessions.Remove(sessionID)
 		s.sessionsUpdatedCh <- struct{}{}
 	})
