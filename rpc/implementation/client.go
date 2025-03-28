@@ -10,11 +10,15 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-func ListSessions(port int) (*pb.SessionList, error) {
-	conn, err := grpc.NewClient(
+func getClient(port int) (*grpc.ClientConn, error) {
+	return grpc.NewClient(
 		fmt.Sprintf("localhost:%d", port),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
+}
+
+func ListSessions(port int) (*pb.SessionList, error) {
+	conn, err := getClient(port)
 
 	if err != nil {
 		return nil, err
@@ -27,10 +31,8 @@ func ListSessions(port int) (*pb.SessionList, error) {
 }
 
 func CreateSession(port, timeSeconds int, blockListNames []string) error {
-	conn, err := grpc.NewClient(
-		fmt.Sprintf("localhost:%d", port),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
+	conn, err := getClient(port)
+
 	if err != nil {
 		return err
 	}
