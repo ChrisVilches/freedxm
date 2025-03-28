@@ -84,8 +84,8 @@ func main() {
 	}
 
 	if grpcErr, ok := status.FromError(err); ok {
-		// TODO: Nice, but make it a tad prettier
-		log.Fatalf("gRPC Error: %s", grpcErr.Message())
+		mainMsg := "Error while communicating with the server"
+		log.Fatalf("(%s) %s", mainMsg, grpcErr.Message())
 	}
 
 	log.Fatal(err)

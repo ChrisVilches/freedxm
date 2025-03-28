@@ -38,7 +38,7 @@ func (s *service) CreateSession(
 		}
 
 		if blockList == nil {
-			return nil, fmt.Errorf("%s not found", b)
+			return nil, fmt.Errorf("'%s' not found", b)
 		}
 
 		blockLists = append(blockLists, *blockList)
