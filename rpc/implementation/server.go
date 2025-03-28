@@ -1,6 +1,5 @@
 package rpc
 
-// TODO: Clean every file in this directory. Messy as hell.
 import (
 	"context"
 	"fmt"
