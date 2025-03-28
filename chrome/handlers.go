@@ -66,7 +66,13 @@ func shouldSkip(targetInfo targetInfo) bool {
 		return true
 	}
 
-	return strings.HasPrefix(targetInfo.URL, chromeExtensionPrefix)
+	for _, prefix := range skipPrefix {
+		if strings.HasPrefix(targetInfo.URL, prefix) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func blockTargetIfMatches(
@@ -84,7 +90,7 @@ func blockTargetIfMatches(
 		executeCmd("Page.navigate",
 			targetSession.SessionID,
 			conn,
-			map[string]any{"url": redirectURL},
+			map[string]any{"url": getRedirectURL(targetSession.TargetInfo.URL)},
 		)
 	}
 }

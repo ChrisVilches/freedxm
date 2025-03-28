@@ -2,7 +2,11 @@ package chrome
 
 import (
 	"context"
+	_ "embed"
+	"fmt"
 	"log"
+	"net/url"
+	"os"
 	"sync/atomic"
 
 	"github.com/ChrisVilches/freedxm/patterns"
@@ -12,25 +16,19 @@ import (
 )
 
 const (
-	defaultPort           = 9222
-	chromeExtensionPrefix = "chrome-extension://"
-	wsChSize              = 10
-	// TODO: this is not going to work on all environments.
-	// Maybe one way to solve this issue
-	// is to read the HTML files beforehand and then send the
-	// HTML to replace the content.
-	// Either that or let the user specify the path to the file,
-	// but consider that the
-	// distribution of the software would need to require adding
-	// those files, which I
-	// don't know how to do yet (e.g. configure the pacman
-	// package to include those
-	// files and install them, but even then, how am I
-	// going to reference them?).
-	// some other alternative ideas: (1) start an http server (2) dump the HTML
-	// to a /tmp file and open that path in the browser.
-	redirectURL = "file:///home/chris/dev/freedxm/block-pages/1.html"
+	defaultPort          = 9222
+	wsChSize             = 10
+	blockPagePath        = "/tmp/freedxm-block.html"
+	blockPagePermissions = 0644
 )
+
+//go:embed 1.html
+var blockPageEmbeddedHTML string
+
+var skipPrefix = []string{
+	"chrome-extension://",
+	"file://",
+}
 
 var commandID atomic.Int32
 
@@ -96,10 +94,28 @@ func getMsgsFromConnection(conn *websocket.Conn) <-chan cdpResponse {
 	return ch
 }
 
+func getRedirectURL(blockedURL string) string {
+	encodedURL := url.QueryEscape(blockedURL)
+	return fmt.Sprintf("file://%s?url=%s", blockPagePath, encodedURL)
+}
+
+func createBlockHTMLPage() {
+	err := os.WriteFile(
+		blockPagePath,
+		[]byte(blockPageEmbeddedHTML),
+		blockPagePermissions,
+	)
+	if err != nil {
+		log.Println("Failed to write embedded HTML to file:", err)
+	}
+}
+
 // When a session starts, it blocks existing tabs using the target
 // attaching mechanism. For additional sessions, an "update" event
 // triggers, attempting to block all tabs that match the new domain blocklist.
 func MonitorChrome(ctx context.Context, matcher *patterns.Matcher, updateCh <-chan struct{}) {
+	createBlockHTMLPage()
+
 	conn, err := createConnection()
 	if err != nil {
 		handleNoDebugger()
