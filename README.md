@@ -26,7 +26,7 @@ domains = ["twitch.tv", "google.com", "chatgpt.com"]
 processes = ["insomnia", "vlc"]
 ```
 
-Compile and run the executable. For an enhanced experience, consider using your preferred process manager, such as Systemd:
+Compile and run the executable. For an enhanced experience, consider using your preferred process manager, such as `systemd`:
 
 ```sh
 ./freedxm serve

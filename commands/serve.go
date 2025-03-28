@@ -25,9 +25,9 @@ const ServeDefaultPort = 8687
 
 var doPoll = make(chan struct{}, 1)
 var activePoll atomic.Bool
-var chromeCh = make(chan struct{})
 var processMatcher patterns.Matcher
 var domainsMatcher patterns.Matcher
+var chromeCh = make(chan struct{}, 1)
 
 var chromeMonitor = util.NewIdempotentRunner(func(ctx context.Context) {
 	chrome.MonitorChrome(ctx, &domainsMatcher, chromeCh)
@@ -62,7 +62,7 @@ func listenSessionsUpdated(
 	currSessions *model.CurrentSessions,
 	sessionsUpdateCh <-chan struct{},
 ) {
-	observers := []chan struct{}{chromeCh}
+	observers := []chan<- struct{}{chromeCh}
 	for {
 		<-sessionsUpdateCh
 		res := currSessions.MergeLists()
