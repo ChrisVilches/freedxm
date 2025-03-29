@@ -28,6 +28,7 @@ var blockPageEmbeddedHTML string
 var skipPrefix = []string{
 	"chrome-extension://",
 	"file://",
+	"view-source:",
 }
 
 var commandID atomic.Int32
