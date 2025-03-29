@@ -26,26 +26,32 @@ domains = ["twitch.tv", "google.com", "chatgpt.com"]
 processes = ["insomnia", "vlc"]
 ```
 
-Compile and run the executable. For an enhanced experience, consider using your preferred process manager, such as `systemd`:
+Compile and install the executable, ensuring it is included in your `PATH`:
 
 ```sh
-./freedxm serve
+go install
+```
+
+Run the server. For an enhanced experience, consider using your preferred process manager, such as `systemd`:
+
+```sh
+freedxm serve
 ```
 
 Once the server is running, you can execute the following commands to start blocking:
 
 ```sh
-./freedxm new -m 40 -b socialsites,work
+freedxm new -m 40 -b socialsites,work
 
 # or
 
-./freedxm new -m 10 -b work
+freedxm new -m 10 -b work
 ```
 
 For more information, refer to the help command:
 
 ```sh
-./freedxm help
+freedxm help
 ```
 
 ## How it Works
