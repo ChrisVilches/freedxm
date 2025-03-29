@@ -26,7 +26,7 @@ domains = ["twitch.tv", "google.com", "chatgpt.com"]
 processes = ["insomnia", "vlc"]
 ```
 
-Compile and install the executable, ensuring it is included in your `PATH`:
+Compile and install the executable, making sure it is accessible by adding it to your `PATH` environment variable:
 
 ```sh
 go install
