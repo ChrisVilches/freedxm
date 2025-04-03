@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"fmt"
-	"github.com/ChrisVilches/freedxm/config"
 	rpc "github.com/ChrisVilches/freedxm/rpc/implementation"
 	"github.com/urfave/cli/v3"
 )
@@ -19,12 +18,13 @@ func ListSessions(_ context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-func ShowConfigFileContent(_ context.Context, _ *cli.Command) error {
-	content, err := config.ReadConfigFileRaw()
+func ShowConfigFileContent(_ context.Context, cmd *cli.Command) error {
+	port := int(cmd.Int("port"))
+	result, err := rpc.FetchConfigFileContent(port)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(content)
+	fmt.Println(result)
 	return nil
 }

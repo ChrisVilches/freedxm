@@ -12,6 +12,7 @@ import (
 	"github.com/ChrisVilches/freedxm/rpc/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type service struct {
@@ -79,6 +80,17 @@ func (s *service) FetchSessions(
 	}
 
 	return &pb.SessionList{Sessions: result}, nil
+}
+
+func (s *service) FetchConfigFileContent(
+	_ context.Context,
+	_ *emptypb.Empty,
+) (*wrapperspb.StringValue, error) {
+	res, err := config.ReadConfigFileRaw()
+	if err != nil {
+		return nil, err
+	}
+	return &wrapperspb.StringValue{Value: res}, nil
 }
 
 func GRPCServerStart(

@@ -9,21 +9,21 @@ import (
 	"os"
 )
 
+var portFlag = &cli.IntFlag{
+	Name:    "port",
+	Aliases: []string{"p"},
+	Value:   int64(commands.ServeDefaultPort),
+	Usage:   "Port number for service location",
+}
+
 func getCmds() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:    "serve",
 			Aliases: []string{"s"},
 			Usage:   "Start the server",
-			Flags: []cli.Flag{
-				&cli.IntFlag{
-					Name:    "port",
-					Aliases: []string{"p"},
-					Value:   int64(commands.ServeDefaultPort),
-					Usage:   "Port number to listen on",
-				},
-			},
-			Action: commands.Serve,
+			Flags:   []cli.Flag{portFlag},
+			Action:  commands.Serve,
 		},
 		{
 			Name:    "new",
@@ -42,12 +42,7 @@ func getCmds() []*cli.Command {
 					Required: true,
 					Usage:    "Block lists to use",
 				},
-				&cli.IntFlag{
-					Name:    "port",
-					Aliases: []string{"p"},
-					Value:   int64(commands.ServeDefaultPort),
-					Usage:   "Port where the service is running on",
-				},
+				portFlag,
 			},
 			Action: commands.AddSession,
 		},
@@ -55,20 +50,14 @@ func getCmds() []*cli.Command {
 			Name:    "list",
 			Aliases: []string{"ls"},
 			Usage:   "List active sessions",
-			Flags: []cli.Flag{
-				&cli.IntFlag{
-					Name:    "port",
-					Aliases: []string{"p"},
-					Value:   int64(commands.ServeDefaultPort),
-					Usage:   "Port where the service is running on",
-				},
-			},
-			Action: commands.ListSessions,
+			Flags:   []cli.Flag{portFlag},
+			Action:  commands.ListSessions,
 		},
 		{
 			Name:    "show-config",
 			Aliases: []string{"sc"},
 			Usage:   "Show config file content",
+			Flags:   []cli.Flag{portFlag},
 			Action:  commands.ShowConfigFileContent,
 		},
 	}

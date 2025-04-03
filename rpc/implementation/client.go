@@ -47,3 +47,22 @@ func CreateSession(port, timeSeconds int, blockListNames []string) error {
 
 	return err
 }
+
+func FetchConfigFileContent(port int) (string, error) {
+	conn, err := getClient(port)
+
+	if err != nil {
+		return "", err
+	}
+
+	defer conn.Close()
+
+	client := pb.NewServiceClient(conn)
+
+	res, err := client.FetchConfigFileContent(
+		context.Background(),
+		&emptypb.Empty{},
+	)
+
+	return res.Value, err
+}
