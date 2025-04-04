@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
-	"github.com/ChrisVilches/freedxm/commands"
-	"github.com/urfave/cli/v3"
-	"google.golang.org/grpc/status"
 	"log"
 	"os"
+
+	"github.com/ChrisVilches/freedxm/commands"
+	"github.com/ChrisVilches/freedxm/config"
+	"github.com/urfave/cli/v3"
+	"google.golang.org/grpc/status"
 )
 
 var portFlag = &cli.IntFlag{
@@ -63,7 +65,26 @@ func getCmds() []*cli.Command {
 	}
 }
 
+func configLogger() {
+	conf, err := config.GetConfig()
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	dateTime := log.Ldate | log.Ltime
+
+	if conf.Options.LogDateTime {
+		log.SetFlags(log.Flags() | dateTime)
+	} else {
+		log.SetFlags(log.Flags() &^ dateTime)
+	}
+}
+
 func main() {
+	configLogger()
+
 	cmd := &cli.Command{Commands: getCmds()}
 
 	err := cmd.Run(context.Background(), os.Args)

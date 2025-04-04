@@ -34,6 +34,14 @@ func ReadConfigFileRaw() (string, error) {
 	return util.ReadFileEntireContent(filepath)
 }
 
+func GetConfig() (*Config, error) {
+	filepath, err := getConfigFilePath()
+	if err != nil {
+		return nil, err
+	}
+	return util.ReadTomlFile[Config](filepath)
+}
+
 func GetBlockListByName(name string) (*model.BlockList, error) {
 	filepath, err := getConfigFilePath()
 	if err != nil {

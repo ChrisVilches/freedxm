@@ -6,6 +6,10 @@ type BlockList struct {
 	Processes []string `json:"processes" toml:"processes"`
 }
 
+type Options struct {
+	LogDateTime bool `toml:"log-date-time"`
+}
+
 type Session struct {
 	TimeSeconds int         `json:"timeSeconds"`
 	BlockLists  []BlockList `json:"blockLists"`
