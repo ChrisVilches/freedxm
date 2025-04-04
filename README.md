@@ -15,6 +15,9 @@ The Freedom application, known for blocking distracting apps and websites to enh
 Create the file `~/.config/freedxm.toml` with content like this:
 
 ```toml
+[options]
+log-date-time = true
+
 [[blocklist]]
 name = "socialsites"
 domains = ["facebook", "x.com", "youtube.com"]
