@@ -82,7 +82,7 @@ func (s *service) FetchSessions(
 	return &pb.SessionList{Sessions: result}, nil
 }
 
-func (s *service) FetchConfigFileContent(
+func (*service) FetchConfigFileContent(
 	_ context.Context,
 	_ *emptypb.Empty,
 ) (*wrapperspb.StringValue, error) {
