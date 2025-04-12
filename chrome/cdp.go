@@ -9,6 +9,7 @@ import (
 	"os"
 	"sync/atomic"
 
+	"github.com/ChrisVilches/freedxm/notifier"
 	"github.com/ChrisVilches/freedxm/patterns"
 	"github.com/ChrisVilches/freedxm/process"
 	"github.com/ChrisVilches/freedxm/util"
@@ -56,7 +57,9 @@ func readResponse(conn *websocket.Conn) (cdpResponse, error) {
 }
 
 func handleNoDebugger() {
-	log.Printf("No debugger, must kill Chrome")
+	msg := "No debugger, must kill Chrome"
+	log.Println(msg)
+	notifier.Notify(msg)
 	process.KillAll("chrome")
 }
 

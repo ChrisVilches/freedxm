@@ -7,7 +7,8 @@ type BlockList struct {
 }
 
 type Options struct {
-	LogDateTime bool `toml:"log-date-time"`
+	LogDateTime bool   `toml:"log-date-time"`
+	Notifier    string `toml:"notifier"`
 }
 
 type Session struct {

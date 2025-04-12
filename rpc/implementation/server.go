@@ -9,6 +9,7 @@ import (
 
 	"github.com/ChrisVilches/freedxm/config"
 	"github.com/ChrisVilches/freedxm/model"
+	"github.com/ChrisVilches/freedxm/notifier"
 	"github.com/ChrisVilches/freedxm/rpc/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -51,7 +52,15 @@ func (s *service) CreateSession(
 	log.Printf("Session started (%ds, %v)", req.TimeSeconds, req.BlockLists)
 
 	time.AfterFunc(time.Duration(req.TimeSeconds)*time.Second, func() {
-		log.Printf("Session ended (%ds, %v)", req.TimeSeconds, req.BlockLists)
+		msg := fmt.Sprintf(
+			"Session ended (%ds, %v)",
+			req.TimeSeconds,
+			req.BlockLists,
+		)
+
+		log.Println(msg)
+		notifier.Notify(msg)
+
 		s.currSessions.Remove(sessionID)
 		s.sessionsUpdatedCh <- struct{}{}
 	})

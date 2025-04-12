@@ -3,6 +3,7 @@ package chrome
 import (
 	"strings"
 
+	"github.com/ChrisVilches/freedxm/notifier"
 	"github.com/ChrisVilches/freedxm/patterns"
 	"github.com/ChrisVilches/freedxm/util"
 	"github.com/gorilla/websocket"
@@ -92,6 +93,7 @@ func blockTargetIfMatches(
 			conn,
 			map[string]any{"url": getRedirectURL(targetSession.TargetInfo.URL)},
 		)
+		notifier.Notify("Blocked", targetSession.TargetInfo.URL)
 	}
 }
 

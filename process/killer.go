@@ -1,9 +1,12 @@
 package process
 
 import (
+	"fmt"
 	"log"
 	"os/exec"
 	"sync"
+
+	"github.com/ChrisVilches/freedxm/notifier"
 )
 
 var mu sync.Mutex
@@ -38,7 +41,9 @@ func tryKill(processName string) {
 	for _, flag := range flags {
 		cmd := exec.Command("killall", flag, processName)
 		if err := cmd.Run(); err == nil {
-			log.Printf("killed %s (%s)", processName, flag)
+			msg := fmt.Sprintf("killed %s (%s)", processName, flag)
+			log.Println(msg)
+			notifier.Notify(msg)
 			return
 		}
 	}
