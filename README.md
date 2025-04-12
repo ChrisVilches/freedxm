@@ -18,7 +18,7 @@ Create the file `~/.config/freedxm.toml` with content like this:
 [options]
 log-date-time = true
 
-[notification]
+[notification] # Optional
 normal = ["i3-nagbar", "-t", "warning", "-m", "%title: %message"]
 warning = ["dunstify", "-u", "critical", "%title", "%message", "--timeout", "2000"]
 
