@@ -53,11 +53,6 @@ func (s *service) CreateSession(
 	log.Printf("Session started (%ds, %v)", req.TimeSeconds, req.BlockLists)
 
 	time.AfterFunc(time.Duration(req.TimeSeconds)*time.Second, func() {
-		// TODO: I should consider logging the same message as the notified one.
-		// Simply append the title + body and log the whole thing.
-		// Perhaps rename the functions as NotifyAndLog and WarnAndLog
-		log.Printf("Session ended (%ds, %v)", req.TimeSeconds, req.BlockLists)
-
 		info := fmt.Sprintf(
 			"%d seconds (%s)",
 			req.TimeSeconds,

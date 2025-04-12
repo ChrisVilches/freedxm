@@ -43,10 +43,20 @@ func notifyAux(isWarn bool, title string, msgs ...string) {
 	go handleCmd(exec.Command(args[0], args[1:]...))
 }
 
+func logNotification(isWarn bool, title string, msgs ...string) {
+	about := "info"
+	if isWarn {
+		about = "warn"
+	}
+	log.Printf("(%s notif) %s: %s", about, title, strings.Join(msgs, " "))
+}
+
 func Notify(title string, msgs ...string) {
+	go logNotification(false, title, msgs...)
 	notifyAux(false, title, msgs...)
 }
 
 func NotifyWarn(title string, msgs ...string) {
+	go logNotification(true, title, msgs...)
 	notifyAux(true, title, msgs...)
 }

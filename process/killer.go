@@ -41,10 +41,10 @@ func tryKill(processName string) {
 	for _, flag := range flags {
 		cmd := exec.Command("killall", flag, processName)
 		if err := cmd.Run(); err == nil {
-			proc := fmt.Sprintf("%s (%s)", processName, flag)
-
-			log.Println("killed " + proc)
-			notifier.NotifyWarn("Killed Process", proc)
+			notifier.NotifyWarn(
+				"Killed Process",
+				fmt.Sprintf("%s (%s)", processName, flag),
+			)
 			return
 		}
 	}
