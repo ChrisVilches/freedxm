@@ -5,8 +5,9 @@ import (
 )
 
 type Config struct {
-	Blocklists []model.BlockList `toml:"blocklist"`
-	Options    model.Options     `toml:"options"`
+	Blocklists   []model.BlockList  `toml:"blocklist"`
+	Options      model.Options      `toml:"options"`
+	Notification model.Notification `toml:"notification"`
 }
 
 func (c *Config) GetAllNames() []string {

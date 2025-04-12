@@ -15,48 +15,7 @@ func handleCmd(cmd *exec.Cmd) {
 	}
 }
 
-func notifZenity(isWarn bool, title string, msgs ...string) []string {
-	level := "--info"
-	if isWarn {
-		level = "--warning"
-	}
-	return []string{
-		"zenity", level, "--title", title, "--text", strings.Join(msgs, " ")}
-}
-
 // TODO: Why does this print a (U)???
-func notifNotifySend(
-	isWarn bool,
-	useDunstify bool,
-	title string,
-	msgs ...string,
-) []string {
-	level := "normal"
-	if isWarn {
-		level = "critical"
-	}
-
-	program := "notify-send"
-	if useDunstify {
-		program = "dunstify"
-	}
-
-	return []string{program, "-u", level, title, strings.Join(msgs, " ")}
-}
-
-func getExecArgs(isWarn bool, notifier, title string, msgs ...string) []string {
-	switch notifier {
-	case "notify-send":
-		return notifNotifySend(isWarn, false, title, msgs...)
-	case "dunstify":
-		return notifNotifySend(isWarn, true, title, msgs...)
-	case "zenity":
-		return notifZenity(isWarn, title, msgs...)
-	default:
-		return nil
-	}
-}
-
 func notifyAux(isWarn bool, title string, msgs ...string) {
 	conf, err := config.GetConfig()
 
@@ -65,17 +24,21 @@ func notifyAux(isWarn bool, title string, msgs ...string) {
 		return
 	}
 
-	notifier := conf.Options.Notifier
+	args := conf.Notification.Normal
 
-	if notifier == "" {
+	if isWarn {
+		args = conf.Notification.Warning
+	}
+
+	if args == nil || len(args) == 0 {
 		return
 	}
 
-	args := getExecArgs(isWarn, notifier, title, msgs...)
+	fullMessage := strings.Join(msgs, " ")
 
-	if args == nil {
-		log.Println("notifier is wrong:", notifier)
-		return
+	for i := range args {
+		args[i] = strings.ReplaceAll(args[i], "%title", title)
+		args[i] = strings.ReplaceAll(args[i], "%message", fullMessage)
 	}
 
 	go handleCmd(exec.Command(args[0], args[1:]...))

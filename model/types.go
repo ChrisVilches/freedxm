@@ -11,6 +11,11 @@ type Options struct {
 	Notifier    string `toml:"notifier"`
 }
 
+type Notification struct {
+	Normal  []string `toml:"normal"`
+	Warning []string `toml:"warning"`
+}
+
 type Session struct {
 	TimeSeconds int         `json:"timeSeconds"`
 	BlockLists  []BlockList `json:"blockLists"`
