@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/ChrisVilches/freedxm/config"
@@ -52,14 +53,18 @@ func (s *service) CreateSession(
 	log.Printf("Session started (%ds, %v)", req.TimeSeconds, req.BlockLists)
 
 	time.AfterFunc(time.Duration(req.TimeSeconds)*time.Second, func() {
-		msg := fmt.Sprintf(
-			"Session ended (%ds, %v)",
+		// TODO: I should consider logging the same message as the notified one.
+		// Simply append the title + body and log the whole thing.
+		// Perhaps rename the functions as NotifyAndLog and WarnAndLog
+		log.Printf("Session ended (%ds, %v)", req.TimeSeconds, req.BlockLists)
+
+		info := fmt.Sprintf(
+			"%d seconds (%s)",
 			req.TimeSeconds,
-			req.BlockLists,
+			strings.Join(req.BlockLists, ", "),
 		)
 
-		log.Println(msg)
-		notifier.Notify(msg)
+		notifier.Notify("Session Ended", info)
 
 		s.currSessions.Remove(sessionID)
 		s.sessionsUpdatedCh <- struct{}{}

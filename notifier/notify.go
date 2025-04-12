@@ -15,16 +15,22 @@ func handleCmd(cmd *exec.Cmd) {
 	}
 }
 
-func notifI3nagbar(isWarn bool, msgs ...string) []string {
-	level := "warning"
+func notifZenity(isWarn bool, title string, msgs ...string) []string {
+	level := "--info"
 	if isWarn {
-		level = "error"
+		level = "--warning"
 	}
-	return []string{"i3-nagbar", "-t", level, "-m", strings.Join(msgs, " ")}
+	return []string{
+		"zenity", level, "--title", title, "--text", strings.Join(msgs, " ")}
 }
 
 // TODO: Why does this print a (U)???
-func notifNotifySend(isWarn bool, useDunstify bool, msgs ...string) []string {
+func notifNotifySend(
+	isWarn bool,
+	useDunstify bool,
+	title string,
+	msgs ...string,
+) []string {
 	level := "normal"
 	if isWarn {
 		level = "critical"
@@ -35,23 +41,23 @@ func notifNotifySend(isWarn bool, useDunstify bool, msgs ...string) []string {
 		program = "dunstify"
 	}
 
-	return []string{program, "-u", level, strings.Join(msgs, " ")}
+	return []string{program, "-u", level, title, strings.Join(msgs, " ")}
 }
 
-func getExecArgs(isWarn bool, notifier string, msgs ...string) []string {
+func getExecArgs(isWarn bool, notifier, title string, msgs ...string) []string {
 	switch notifier {
 	case "notify-send":
-		return notifNotifySend(isWarn, false, msgs...)
-	case "i3-nagbar":
-		return notifI3nagbar(isWarn, msgs...)
+		return notifNotifySend(isWarn, false, title, msgs...)
 	case "dunstify":
-		return notifNotifySend(isWarn, true, msgs...)
+		return notifNotifySend(isWarn, true, title, msgs...)
+	case "zenity":
+		return notifZenity(isWarn, title, msgs...)
 	default:
 		return nil
 	}
 }
 
-func notifyAux(isWarn bool, msgs ...string) {
+func notifyAux(isWarn bool, title string, msgs ...string) {
 	conf, err := config.GetConfig()
 
 	if err != nil {
@@ -65,7 +71,7 @@ func notifyAux(isWarn bool, msgs ...string) {
 		return
 	}
 
-	args := getExecArgs(isWarn, notifier, msgs...)
+	args := getExecArgs(isWarn, notifier, title, msgs...)
 
 	if args == nil {
 		log.Println("notifier is wrong:", notifier)
@@ -75,10 +81,10 @@ func notifyAux(isWarn bool, msgs ...string) {
 	go handleCmd(exec.Command(args[0], args[1:]...))
 }
 
-func Notify(msgs ...string) {
-	notifyAux(false, msgs...)
+func Notify(title string, msgs ...string) {
+	notifyAux(false, title, msgs...)
 }
 
-func NotifyWarn(msgs ...string) {
-	notifyAux(true, msgs...)
+func NotifyWarn(title string, msgs ...string) {
+	notifyAux(true, title, msgs...)
 }
