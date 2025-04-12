@@ -15,7 +15,6 @@ func handleCmd(cmd *exec.Cmd) {
 	}
 }
 
-// TODO: Why does this print a (U)???
 func notifyAux(isWarn bool, title string, msgs ...string) {
 	conf, err := config.GetConfig()
 
