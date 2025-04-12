@@ -43,7 +43,7 @@ func tryKill(processName string) {
 		if err := cmd.Run(); err == nil {
 			msg := fmt.Sprintf("killed %s (%s)", processName, flag)
 			log.Println(msg)
-			notifier.Notify(msg)
+			notifier.NotifyWarn(msg)
 			return
 		}
 	}

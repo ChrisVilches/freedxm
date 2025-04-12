@@ -11,25 +11,47 @@ import (
 func handleCmd(cmd *exec.Cmd) {
 	err := cmd.Run()
 	if err != nil {
-		log.Println("Failed to send notification:", err)
+		log.Println("failed to send notification:", err)
 	}
 }
 
-func notifI3nagbar(msgs ...string) {
-	handleCmd(exec.Command("i3-nagbar", "-m", strings.Join(msgs, " ")))
+func notifI3nagbar(isWarn bool, msgs ...string) []string {
+	level := "warning"
+	if isWarn {
+		level = "error"
+	}
+	return []string{"i3-nagbar", "-t", level, "-m", strings.Join(msgs, " ")}
 }
 
 // TODO: Why does this print a (U)???
-func notifNotifySend(msgs ...string) {
-	handleCmd(exec.Command("notify-send", strings.Join(msgs, " ")))
+func notifNotifySend(isWarn bool, useDunstify bool, msgs ...string) []string {
+	level := "normal"
+	if isWarn {
+		level = "critical"
+	}
+
+	program := "notify-send"
+	if useDunstify {
+		program = "dunstify"
+	}
+
+	return []string{program, "-u", level, strings.Join(msgs, " ")}
 }
 
-var notifierFunctions = map[string]func(...string){
-	"notify-send": notifNotifySend,
-	"i3-nagbar":   notifI3nagbar,
+func getExecArgs(isWarn bool, notifier string, msgs ...string) []string {
+	switch notifier {
+	case "notify-send":
+		return notifNotifySend(isWarn, false, msgs...)
+	case "i3-nagbar":
+		return notifI3nagbar(isWarn, msgs...)
+	case "dunstify":
+		return notifNotifySend(isWarn, true, msgs...)
+	default:
+		return nil
+	}
 }
 
-func Notify(msgs ...string) {
+func notifyAux(isWarn bool, msgs ...string) {
 	conf, err := config.GetConfig()
 
 	if err != nil {
@@ -43,9 +65,20 @@ func Notify(msgs ...string) {
 		return
 	}
 
-	if notifyFunc, exists := notifierFunctions[notifier]; exists {
-		go notifyFunc(msgs...)
-	} else {
+	args := getExecArgs(isWarn, notifier, msgs...)
+
+	if args == nil {
 		log.Println("notifier is wrong:", notifier)
+		return
 	}
+
+	go handleCmd(exec.Command(args[0], args[1:]...))
+}
+
+func Notify(msgs ...string) {
+	notifyAux(false, msgs...)
+}
+
+func NotifyWarn(msgs ...string) {
+	notifyAux(true, msgs...)
 }

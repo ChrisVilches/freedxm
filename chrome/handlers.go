@@ -93,7 +93,7 @@ func blockTargetIfMatches(
 			conn,
 			map[string]any{"url": getRedirectURL(targetSession.TargetInfo.URL)},
 		)
-		notifier.Notify("Blocked", targetSession.TargetInfo.URL)
+		notifier.NotifyWarn("Blocked", targetSession.TargetInfo.URL)
 	}
 }
 

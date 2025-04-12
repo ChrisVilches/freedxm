@@ -59,7 +59,7 @@ func readResponse(conn *websocket.Conn) (cdpResponse, error) {
 func handleNoDebugger() {
 	msg := "No debugger, must kill Chrome"
 	log.Println(msg)
-	notifier.Notify(msg)
+	notifier.NotifyWarn(msg)
 	process.KillAll("chrome")
 }
 
