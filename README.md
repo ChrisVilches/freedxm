@@ -18,6 +18,10 @@ Create the file `~/.config/freedxm.toml` with content like this:
 [options]
 log-date-time = true
 
+[notification]
+normal = ["i3-nagbar", "-t", "warning", "-m", "%title: %message"]
+warning = ["dunstify", "-u", "critical", "%title", "%message", "--timeout", "2000"]
+
 [[blocklist]]
 name = "socialsites"
 domains = ["facebook", "x.com", "youtube.com"]
@@ -75,6 +79,9 @@ freedxm help
 - **Polling for Processes**: Uses polling for Linux processes to monitor and manage them effectively.
 - **Browser Control**: Other browsers must be included in the process block list to ensure they are blocked. Future plans include controlling other browsers via remote debugging.
 
+### Notification System Integration
+
+- **Configurable Notifications**: Integrates with any notification system by configuring the TOML file as shown in the example above. Notifications can be customized using commands like `i3-nagbar` and `dunstify`, allowing users to receive alerts based on their preferences and system setup.
 
 ## Development
 
