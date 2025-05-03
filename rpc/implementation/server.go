@@ -14,6 +14,7 @@ import (
 	"github.com/ChrisVilches/freedxm/rpc/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -43,10 +44,11 @@ func (s *service) CreateSession(
 		blockLists = append(blockLists, *blockList)
 	}
 
-	sessionID := s.currSessions.Add(model.Session{
-		TimeSeconds: int(req.TimeSeconds),
-		BlockLists:  blockLists,
-	})
+	// TODO: Should NewSession be in model.???
+	sessionID := s.currSessions.Add(model.NewSession(
+		int(req.TimeSeconds),
+		blockLists,
+	))
 
 	s.sessionsUpdatedCh <- struct{}{}
 
@@ -75,7 +77,10 @@ func (s *service) FetchSessions(
 	result := make([]*pb.Session, 0)
 
 	for _, s := range s.currSessions.GetAll() {
-		newSess := pb.Session{TimeSeconds: int32(s.TimeSeconds)}
+		newSess := pb.Session{
+			CreatedAt:   timestamppb.New(s.CreatedAt),
+			TimeSeconds: int32(s.TimeSeconds),
+		}
 
 		for _, b := range s.BlockLists {
 			newSess.BlockLists = append(newSess.BlockLists, &pb.BlockList{

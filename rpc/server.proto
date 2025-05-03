@@ -1,6 +1,7 @@
 syntax = "proto3";
 import "google/protobuf/empty.proto";
 import "google/protobuf/wrappers.proto";
+import "google/protobuf/timestamp.proto";
 option go_package = "rpc/pb";
 
 package freedxm;
@@ -26,6 +27,7 @@ message BlockList {
 message Session {
   int32 timeSeconds = 1;
   repeated BlockList blockLists = 2;
+  google.protobuf.Timestamp createdAt = 3;
 }
 
 message SessionList { repeated Session sessions = 1; }

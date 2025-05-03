@@ -10,6 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 	reflect "reflect"
 	sync "sync"
@@ -139,6 +140,7 @@ type Session struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TimeSeconds   int32                  `protobuf:"varint,1,opt,name=timeSeconds,proto3" json:"timeSeconds,omitempty"`
 	BlockLists    []*BlockList           `protobuf:"bytes,2,rep,name=blockLists,proto3" json:"blockLists,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=createdAt,proto3" json:"createdAt,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -183,6 +185,13 @@ func (x *Session) GetTimeSeconds() int32 {
 func (x *Session) GetBlockLists() []*BlockList {
 	if x != nil {
 		return x.BlockLists
+	}
+	return nil
+}
+
+func (x *Session) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
 	}
 	return nil
 }
@@ -235,7 +244,7 @@ var File_rpc_server_proto protoreflect.FileDescriptor
 
 const file_rpc_server_proto_rawDesc = "" +
 	"\n" +
-	"\x10rpc/server.proto\x12\afreedxm\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1egoogle/protobuf/wrappers.proto\"U\n" +
+	"\x10rpc/server.proto\x12\afreedxm\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"U\n" +
 	"\x11NewSessionRequest\x12\x1e\n" +
 	"\n" +
 	"blockLists\x18\x01 \x03(\tR\n" +
@@ -244,12 +253,13 @@ const file_rpc_server_proto_rawDesc = "" +
 	"\tBlockList\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
 	"\adomains\x18\x02 \x03(\tR\adomains\x12\x1c\n" +
-	"\tprocesses\x18\x03 \x03(\tR\tprocesses\"_\n" +
+	"\tprocesses\x18\x03 \x03(\tR\tprocesses\"\x99\x01\n" +
 	"\aSession\x12 \n" +
 	"\vtimeSeconds\x18\x01 \x01(\x05R\vtimeSeconds\x122\n" +
 	"\n" +
 	"blockLists\x18\x02 \x03(\v2\x12.freedxm.BlockListR\n" +
-	"blockLists\";\n" +
+	"blockLists\x128\n" +
+	"\tcreatedAt\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\";\n" +
 	"\vSessionList\x12,\n" +
 	"\bsessions\x18\x01 \x03(\v2\x10.freedxm.SessionR\bsessions2\xdd\x01\n" +
 	"\aService\x12C\n" +
@@ -275,23 +285,25 @@ var file_rpc_server_proto_goTypes = []any{
 	(*BlockList)(nil),              // 1: freedxm.BlockList
 	(*Session)(nil),                // 2: freedxm.Session
 	(*SessionList)(nil),            // 3: freedxm.SessionList
-	(*emptypb.Empty)(nil),          // 4: google.protobuf.Empty
-	(*wrapperspb.StringValue)(nil), // 5: google.protobuf.StringValue
+	(*timestamppb.Timestamp)(nil),  // 4: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),          // 5: google.protobuf.Empty
+	(*wrapperspb.StringValue)(nil), // 6: google.protobuf.StringValue
 }
 var file_rpc_server_proto_depIdxs = []int32{
 	1, // 0: freedxm.Session.blockLists:type_name -> freedxm.BlockList
-	2, // 1: freedxm.SessionList.sessions:type_name -> freedxm.Session
-	0, // 2: freedxm.Service.CreateSession:input_type -> freedxm.NewSessionRequest
-	4, // 3: freedxm.Service.FetchSessions:input_type -> google.protobuf.Empty
-	4, // 4: freedxm.Service.FetchConfigFileContent:input_type -> google.protobuf.Empty
-	4, // 5: freedxm.Service.CreateSession:output_type -> google.protobuf.Empty
-	3, // 6: freedxm.Service.FetchSessions:output_type -> freedxm.SessionList
-	5, // 7: freedxm.Service.FetchConfigFileContent:output_type -> google.protobuf.StringValue
-	5, // [5:8] is the sub-list for method output_type
-	2, // [2:5] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	4, // 1: freedxm.Session.createdAt:type_name -> google.protobuf.Timestamp
+	2, // 2: freedxm.SessionList.sessions:type_name -> freedxm.Session
+	0, // 3: freedxm.Service.CreateSession:input_type -> freedxm.NewSessionRequest
+	5, // 4: freedxm.Service.FetchSessions:input_type -> google.protobuf.Empty
+	5, // 5: freedxm.Service.FetchConfigFileContent:input_type -> google.protobuf.Empty
+	5, // 6: freedxm.Service.CreateSession:output_type -> google.protobuf.Empty
+	3, // 7: freedxm.Service.FetchSessions:output_type -> freedxm.SessionList
+	6, // 8: freedxm.Service.FetchConfigFileContent:output_type -> google.protobuf.StringValue
+	6, // [6:9] is the sub-list for method output_type
+	3, // [3:6] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_rpc_server_proto_init() }
