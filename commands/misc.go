@@ -18,12 +18,11 @@ func ListSessions(_ context.Context, cmd *cli.Command) error {
 
 	for _, session := range sessionList.Sessions {
 		createdAt := session.CreatedAt.AsTime()
-		diff := time.Now().Sub(createdAt)
-		diffSeconds := int(diff.Seconds())
+		diff := int(time.Now().Sub(createdAt))
 		format := "2006-01-02 15:04:05"
 
 		fmt.Printf("Created at: %v\n", createdAt.In(time.Local).Format(format))
-		fmt.Printf("%d/%ds\n", diffSeconds, session.TimeSeconds)
+		fmt.Printf("%d/%ds\n", diff, session.TimeSeconds)
 		fmt.Println(session.BlockLists)
 	}
 
