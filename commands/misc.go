@@ -18,7 +18,7 @@ func ListSessions(_ context.Context, cmd *cli.Command) error {
 
 	for _, session := range sessionList.Sessions {
 		createdAt := session.CreatedAt.AsTime()
-		diff := int(time.Now().Sub(createdAt))
+		diff := int(time.Now().Sub(createdAt).Seconds())
 		format := "2006-01-02 15:04:05"
 
 		fmt.Printf("Created at: %v\n", createdAt.In(time.Local).Format(format))
