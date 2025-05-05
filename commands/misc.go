@@ -16,13 +16,18 @@ func ListSessions(_ context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	for _, session := range sessionList.Sessions {
+	for idx, session := range sessionList.Sessions {
+		if idx > 0 {
+			fmt.Println()
+		}
+
 		createdAt := session.CreatedAt.AsTime()
 		diff := int(time.Now().Sub(createdAt).Seconds())
 		format := "2006-01-02 15:04:05"
 
-		fmt.Printf("Created at: %v\n", createdAt.In(time.Local).Format(format))
-		fmt.Printf("%d/%ds\n", diff, session.TimeSeconds)
+		fmt.Printf("Since %v", createdAt.In(time.Local).Format(format))
+		percentage := float64(diff) * 100 / float64(session.TimeSeconds)
+		fmt.Printf(" (%.2f%%, %d/%ds)\n", percentage, diff, session.TimeSeconds)
 		fmt.Println(session.BlockLists)
 	}
 

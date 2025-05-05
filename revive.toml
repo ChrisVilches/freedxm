@@ -23,6 +23,6 @@ enableAllRules = true
   Exclude=["TEST"]
 
 [rule.add-constant]
-  arguments = [{ maxLitCount = "1000", allowInts = "0,1,2" }]
+  arguments = [{ maxLitCount = "1000", allowInts = "0,1,2,100" }]
   Exclude=["TEST"]
 
