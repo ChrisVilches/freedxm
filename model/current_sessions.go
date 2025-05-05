@@ -1,7 +1,7 @@
 package model
 
 import (
-	"sort"
+	"slices"
 	"sync"
 
 	"github.com/ChrisVilches/freedxm/util"
@@ -34,8 +34,8 @@ func (c *CurrentSessions) GetAll() []Session {
 		ret = append(ret, s)
 	}
 
-	sort.Slice(ret, func(i, j int) bool {
-		return ret[i].CreatedAt.Before(ret[j].CreatedAt)
+	slices.SortFunc(ret, func(a, b Session) int {
+		return a.CreatedAt.Compare(b.CreatedAt)
 	})
 
 	return ret
