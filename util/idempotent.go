@@ -2,12 +2,12 @@ package util
 
 import (
 	"context"
-	"sync/atomic"
+	"sync"
 )
 
 type IdempotentRunner struct {
-	fn        func(context.Context)
-	isRunning atomic.Bool
+	fn func(context.Context)
+	mu sync.Mutex
 }
 
 func NewIdempotentRunner(fn func(context.Context)) IdempotentRunner {
@@ -15,11 +15,11 @@ func NewIdempotentRunner(fn func(context.Context)) IdempotentRunner {
 }
 
 func (runner *IdempotentRunner) Run(ctx context.Context) {
-	if !runner.isRunning.CompareAndSwap(false, true) {
+	if !runner.mu.TryLock() {
 		return
 	}
 
-	runner.fn(ctx)
+	defer runner.mu.Unlock()
 
-	runner.isRunning.Store(false)
+	runner.fn(ctx)
 }
