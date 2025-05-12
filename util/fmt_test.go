@@ -6,7 +6,7 @@ import (
 
 func TestSecondsToHHMMSS(t *testing.T) {
 	tests := []struct {
-		input    int64
+		input    int32
 		expected string
 	}{
 		{0, "0:00:00"},

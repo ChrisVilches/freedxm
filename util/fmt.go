@@ -9,7 +9,7 @@ const (
 	secondsPerHour   = 60 * secondsPerMinute
 )
 
-func SecondsToHHMMSS(totalSeconds int64) string {
+func SecondsToHHMMSS(totalSeconds int32) string {
 	sign := ""
 	if totalSeconds < 0 {
 		sign = "-"
