@@ -11,6 +11,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const appDescription = "Freedom Port for Linux. " +
+	"Block Websites, Apps, and the Internet."
+
 var portFlag = &cli.IntFlag{
 	Name:    "port",
 	Aliases: []string{"p"},
@@ -85,7 +88,10 @@ func configLogger() {
 func main() {
 	configLogger()
 
-	cmd := &cli.Command{Commands: getCmds()}
+	cmd := &cli.Command{
+		Usage:    appDescription,
+		Commands: getCmds(),
+	}
 
 	err := cmd.Run(context.Background(), os.Args)
 
